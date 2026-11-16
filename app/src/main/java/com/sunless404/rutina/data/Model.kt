@@ -3,6 +3,7 @@ package com.sunless404.rutina.data
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 /** Categorías de bloque. [color] en ARGB. */
 enum class Category(val label: String, val color: Long, val notifiesByDefault: Boolean = true) {
@@ -39,6 +40,7 @@ const val DAY_MIN = 1440
  * [startMin] y [endMin] son minutos desde las 00:00 (0..1439).
  * Si [endMin] <= [startMin] el bloque cruza la medianoche y termina al día siguiente.
  */
+@Serializable
 @Entity(tableName = "blocks")
 data class Block(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -76,6 +78,7 @@ data class Block(
  * [startMin]/[endMin] son minutos desde las 00:00 de [epochDay]; [endMin] puede
  * pasar de 1440 si el bloque termina al día siguiente.
  */
+@Serializable
 @Entity(tableName = "day_entries", indices = [Index("epochDay")])
 data class DayEntry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -100,6 +103,7 @@ data class DayEntry(
 }
 
 /** Estado de una fecha: materializada (historial congelado) y tipo de día. */
+@Serializable
 @Entity(tableName = "days")
 data class DayInfo(
     @PrimaryKey val epochDay: Long,

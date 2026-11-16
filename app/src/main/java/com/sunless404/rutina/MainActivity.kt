@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sunless404.rutina.ui.edit.EditScreen
 import com.sunless404.rutina.ui.importer.ImportScreen
+import com.sunless404.rutina.ui.settings.BackupSection
 import com.sunless404.rutina.ui.settings.SettingsScreen
 import com.sunless404.rutina.ui.stats.StatsScreen
 import com.sunless404.rutina.ui.theme.RutinaTheme
@@ -92,7 +93,7 @@ fun RutinaApp() {
                 Screen.ESTADISTICAS -> StatsScreen(viewModel())
                 Screen.RUTINA -> EditScreen(viewModel(), onImport = { screen = Screen.IMPORTAR })
                 Screen.IMPORTAR -> ImportScreen(viewModel(), onBack = { screen = Screen.RUTINA })
-                Screen.AJUSTES -> SettingsScreen(onBack = { screen = Screen.HOY })
+                Screen.AJUSTES -> SettingsScreen(onBack = { screen = Screen.HOY }) { BackupSection() }
             }
         }
     }

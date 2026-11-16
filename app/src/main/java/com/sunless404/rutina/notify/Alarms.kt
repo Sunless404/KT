@@ -16,6 +16,7 @@ import com.sunless404.rutina.data.DayEntry
 import com.sunless404.rutina.data.DayType
 import com.sunless404.rutina.data.Status
 import com.sunless404.rutina.domain.fmtTime
+import com.sunless404.rutina.widget.RoutineWidget
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Instant
@@ -31,8 +32,14 @@ class Alarms(private val app: App) {
     private val nm = NotificationManagerCompat.from(app)
     private val mutex = Mutex()
 
-    /** [entry] == null es el aviso de fin de día. */
-    private class Event(val at: Long, val entry: DayEntry?, val startAt: Long = at, val endAt: Long = at)
+    /** [entry] == null es el aviso de fin de día; [refresh] solo despierta para redibujar el widget. */
+    private class Event(
+        val at: Long,
+        val entry: DayEntry?,
+        val startAt: Long = at,
+        val endAt: Long = at,
+        val refresh: Boolean = false,
+    )
 
     fun canScheduleExact(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()
@@ -46,7 +53,7 @@ class Alarms(private val app: App) {
         val events = events()
 
         events.filter { it.at > prefs.lastHandled && it.at <= now }.forEach { ev ->
-            if (ev.entry == null) notifyEndOfDay() else if (now < ev.endAt) notifyEntry(ev.entry, ev.startAt, ev.endAt)
+            if (ev.refresh) Unit else if (ev.entry == null) notifyEndOfDay() else if (now < ev.endAt) notifyEntry(ev.entry, ev.startAt, ev.endAt)
         }
         prefs.lastHandled = now
 
@@ -63,6 +70,7 @@ class Alarms(private val app: App) {
             // Sin permiso de alarmas exactas: puede retrasarse unos minutos.
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, pi)
         }
+        RoutineWidget.refresh(app)
     }
 
     private suspend fun events(): List<Event> {
@@ -71,12 +79,14 @@ class Alarms(private val app: App) {
         val today = LocalDate.now()
         val out = ArrayList<Event>()
         app.repo.range(today.minusDays(1), today.plusDays(1)).values.forEach { day ->
-            if (day.type != DayType.NORMAL) return@forEach
             val midnight = LocalDate.ofEpochDay(day.epochDay).atStartOfDay(zone)
             day.entries.forEach { e ->
-                if (!e.notify) return@forEach
                 val startAt = midnight.plusMinutes(e.startMin.toLong()).toInstant().toEpochMilli()
                 val endAt = midnight.plusMinutes(e.endMin.toLong()).toInstant().toEpochMilli()
+                // El widget cambia al empezar y al acabar cada bloque, avise o no.
+                out += Event(startAt, null, refresh = true)
+                out += Event(endAt, null, refresh = true)
+                if (!e.notify || day.type != DayType.NORMAL) return@forEach
                 val lead = (e.leadMin ?: prefs.defaultLeadMin) * 60_000L
                 when (e.status) {
                     Status.PENDIENTE -> out += Event(startAt - lead, e, startAt, endAt)

@@ -165,6 +165,35 @@ class Repository(private val db: AppDatabase) {
         dao.insertBlocks(blocks.map { it.copy(id = 0) })
     }
 
+    // ---------- Copia de seguridad ----------
+
+    suspend fun exportBackup(settings: BackupSettings): Backup {
+        ensureMaterialized()
+        return Backup(
+            exportedAt = System.currentTimeMillis(),
+            blocks = dao.allBlocks(),
+            entries = dao.allEntries(),
+            days = dao.allDays(),
+            settings = settings,
+        )
+    }
+
+    /** Sustituye todos los datos por los de la copia. */
+    suspend fun restoreBackup(backup: Backup) {
+        mutex.withLock {
+            db.withTransaction {
+                dao.deleteAllBlocks()
+                dao.deleteAllEntries()
+                dao.deleteAllDays()
+                dao.insertBlocks(backup.blocks)
+                dao.insertEntries(backup.entries)
+                dao.upsertDays(backup.days)
+            }
+        }
+        ensureMaterialized()
+        onChanged()
+    }
+
     companion object {
         private const val MAX_BACKFILL_DAYS = 60L
     }
