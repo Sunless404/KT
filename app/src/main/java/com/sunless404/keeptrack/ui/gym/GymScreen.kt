@@ -64,6 +64,7 @@ import com.sunless404.keeptrack.domain.GymScore
 import com.sunless404.keeptrack.domain.GymSummary
 import com.sunless404.keeptrack.domain.dayName
 import com.sunless404.keeptrack.domain.fmtShortDate
+import com.sunless404.keeptrack.ui.account.FriendsLeaderboard
 import com.sunless404.keeptrack.ui.common.KtIcons
 import com.sunless404.keeptrack.ui.theme.Brand
 import kotlinx.coroutines.flow.SharingStarted
@@ -268,22 +269,11 @@ private fun Leaderboard(s: GymSummary) {
             SegmentedButton(selected = weekly, onClick = { weekly = true }, shape = SegmentedButtonDefaults.itemShape(0, 2)) { Text("Semanal") }
             SegmentedButton(selected = !weekly, onClick = { weekly = false }, shape = SegmentedButtonDefaults.itemShape(1, 2)) { Text("Histórica") }
         }
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), shape = MaterialTheme.shapes.medium) {
-            Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("1", style = MaterialTheme.typography.headlineSmall, color = Brand.Fire, modifier = Modifier.width(32.dp))
-                Text("Tú", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Text(if (weekly) "${s.weekPoints} pts" else "${s.strengthScore}", style = MaterialTheme.typography.titleMedium)
-            }
-        }
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer), shape = MaterialTheme.shapes.medium) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Compite con tus amigos", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    "Pronto podrás crear una cuenta, añadir amigos y ver aquí la clasificación de vuestro grupo.",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
+        Text(
+            if (weekly) "Tus puntos esta semana: ${s.weekPoints}" else "Tu fuerza relativa: ${s.strengthScore}",
+            style = MaterialTheme.typography.titleSmall,
+        )
+        FriendsLeaderboard(weekly)
         Text(
             "Cómo se puntúa: 10 pts por sesión (hasta 5 por semana); por cada récord, 5 × % de mejora " +
                 "(entre 5 y 50; un ejercicio nuevo da 5); y 5 pts por semana seguida yendo (hasta 25). " +

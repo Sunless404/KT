@@ -6,6 +6,12 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// Firebase solo se configura si existe app/google-services.json (no se sube al repo).
+// Sin él la app compila igual y las funciones de nube quedan desactivadas.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.sunless404.keeptrack"
     compileSdk = 35
@@ -68,6 +74,10 @@ dependencies {
     ksp("androidx.room:room-compiler:2.6.1")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
 
     testImplementation("junit:junit:4.13.2")
     // Capturas de pantalla en la JVM (sin emulador), solo para revisar el diseño.

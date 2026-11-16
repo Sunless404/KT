@@ -132,6 +132,40 @@ mejorar sus productos. La clave se guarda cifrada con el Android Keystore y no
 va en la copia de seguridad. Si se alcanza el límite gratuito, la app lo dice y
 basta con esperar.
 
+## Cuenta, nube y amigos (Firebase)
+
+Opcional. Con una cuenta (correo, contraseña y nombre de usuario) tus datos se
+guardan en la nube y puedes competir con tus amigos en el gimnasio.
+
+- Se entra desde Ajustes > Cuenta y nube, o desde Gimnasio > Clasificación.
+- Sincronización: unos segundos después de cada cambio se sube una copia
+  completa (rutina, tareas, historial, gimnasio y ajustes) a tu cuenta. Al
+  iniciar sesión en un móvil donde ya hay datos, la app pregunta si te quedas
+  con los de la nube o con los del móvil.
+- Amigos: los añades por su nombre de usuario y ves su puntuación. Para que
+  ellos te vean, tienen que añadirte también.
+- La clave de la IA no se sube.
+
+### Configuración (una vez)
+
+1. Proyecto de Firebase con una app Android con paquete `com.sunless404.keeptrack`.
+2. Descarga `google-services.json` y ponlo en `app/google-services.json`. No se
+   sube al repositorio (está en `.gitignore`). Sin él la app compila igual, pero
+   sin funciones de nube.
+3. Authentication: activa "Correo electrónico/contraseña".
+4. Firestore Database: edición Standard, modo producción.
+5. Firestore > Reglas: pega el contenido de `firestore.rules` y pulsa Publicar.
+
+Datos en Firestore:
+
+- `users/{uid}`: perfil público (usuario, puntos de la semana, fuerza).
+- `users/{uid}/friends/{uid}`: amigos que has añadido (privado).
+- `users/{uid}/sync/*`: copia de tus datos comprimida (privado).
+- `usernames/{usuario}`: garantiza que cada nombre de usuario es único.
+
+Las puntuaciones las calcula el móvil; las reglas limitan los valores, pero
+alguien con conocimientos técnicos podría falsear las suyas.
+
 ## Avisos
 
 - Una alarma exacta (`setExactAndAllowWhileIdle`) para el próximo aviso; al sonar

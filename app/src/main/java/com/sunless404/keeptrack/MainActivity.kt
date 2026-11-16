@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sunless404.keeptrack.ui.account.AccountPanel
 import com.sunless404.keeptrack.ui.assistant.AssistantScreen
 import com.sunless404.keeptrack.ui.common.KtIcons
 import com.sunless404.keeptrack.ui.edit.RoutineScreen
@@ -110,6 +111,9 @@ fun KeepTrackApp() {
                     Screen.ASISTENTE -> AssistantScreen(viewModel(), onOpenSettings = { go(Screen.AJUSTES) })
                     Screen.GIMNASIO -> GymScreen(viewModel(), onBack = { screen = Screen.ESTADISTICAS })
                     Screen.AJUSTES -> SettingsScreen(onBack = { screen = previous.takeIf { it != Screen.AJUSTES } ?: Screen.HOY }) {
+                        Text("Cuenta y nube", style = MaterialTheme.typography.titleMedium)
+                        AccountPanel("Con una cuenta, tu rutina, tareas, historial y gimnasio se guardan en la nube y los recuperas si cambias de móvil.")
+                        HorizontalDivider(Modifier.padding(vertical = 8.dp))
                         AiSection()
                         HorizontalDivider(Modifier.padding(vertical = 8.dp))
                         BackupSection()
