@@ -33,7 +33,6 @@ import com.sunless404.keeptrack.domain.Habit
 import com.sunless404.keeptrack.ui.common.KtIcons
 import com.sunless404.keeptrack.ui.common.ProgressRing
 import com.sunless404.keeptrack.ui.common.SectionLabel
-import com.sunless404.keeptrack.ui.theme.Brand
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -252,9 +251,15 @@ private fun StreakCard(s: Streak, visible: Boolean, delayMs: Int, onClick: (() -
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(s.habit.label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f), maxLines = 1)
                 Icon(
-                    if (s.habit == Habit.GIMNASIO) KtIcons.Dumbbell else KtIcons.Flame, null,
-                    tint = if (s.current > 0) Brand.Fire else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(22.dp).scale(if (s.habit == Habit.GIMNASIO) 1f else scale),
+                    when (s.habit) {
+                        Habit.ESTUDIO -> KtIcons.Study
+                        Habit.GIMNASIO -> KtIcons.Dumbbell
+                        Habit.LECTURA -> KtIcons.Book
+                        Habit.SUENO -> KtIcons.Bed
+                    },
+                    null,
+                    tint = if (s.current > 0) color else MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(24.dp).scale(scale),
                 )
             }
             Spacer(Modifier.height(6.dp))
