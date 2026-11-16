@@ -1,6 +1,6 @@
-# Rutina
+# KeepTrack
 
-App Android para seguir una rutina semanal: ver el día, marcar bloques hechos,
+App Android (KeepTrack) para seguir una rutina semanal: ver el día, marcar bloques hechos,
 recibir avisos y revisar el progreso. Uso personal en un solo móvil: todo se
 guarda en local (Room), sin cuentas, sin servidor, sin analítica y sin permiso
 de Internet.
@@ -45,7 +45,7 @@ si no coincide. Si ocurre, exporta una copia de seguridad, desinstala e instala.
 2. En la pantalla Hoy aparece una tarjeta de permisos. Concede notificaciones,
    alarmas exactas y la exclusión de la optimización de batería; sin ellos los
    avisos pueden no llegar o llegar tarde.
-3. Para el widget: mantén pulsada la pantalla de inicio > Widgets > Rutina.
+3. Para el widget: mantén pulsada la pantalla de inicio > Widgets > KeepTrack.
 
 ## Pantallas
 

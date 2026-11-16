@@ -1,4 +1,4 @@
 <resources>
-    <string name="app_name">Rutina</string>
+    <string name="app_name">KeepTrack</string>
     <string name="widget_description">Bloque actual, el siguiente y un tick rápido</string>
 </resources>

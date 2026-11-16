@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.sunless404.rutina"
+    namespace = "com.sunless404.keeptrack"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.sunless404.rutina"
+        applicationId = "com.sunless404.keeptrack"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
