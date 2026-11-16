@@ -1,0 +1,95 @@
+package com.sunless404.keeptrack.ui.common
+
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.unit.dp
+
+/** Iconos propios de trazo (24×24) para no depender de la librería de iconos extendida. */
+object KtIcons {
+    private fun icon(name: String, vararg strokes: String, fills: List<String> = emptyList(), width: Float = 2f): ImageVector =
+        ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f).apply {
+            strokes.forEach {
+                addPath(
+                    pathData = PathParser().parsePathString(it).toNodes(),
+                    stroke = SolidColor(Color.Black),
+                    strokeLineWidth = width,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                )
+            }
+            fills.forEach {
+                addPath(pathData = PathParser().parsePathString(it).toNodes(), fill = SolidColor(Color.Black))
+            }
+        }.build()
+
+    val Today = icon(
+        "today",
+        "M8,12 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0",
+        "M12,2.5 V4.5 M12,19.5 V21.5 M2.5,12 H4.5 M19.5,12 H21.5 M5.3,5.3 L6.7,6.7 M17.3,17.3 L18.7,18.7 M5.3,18.7 L6.7,17.3 M17.3,6.7 L18.7,5.3",
+    )
+    val Tasks = icon(
+        "tasks",
+        "M5,5 H19 a1.5,1.5 0 0,1 1.5,1.5 V19 a1.5,1.5 0 0,1 -1.5,1.5 H5 a1.5,1.5 0 0,1 -1.5,-1.5 V6.5 A1.5,1.5 0 0,1 5,5 Z",
+        "M3.5,9.5 H20.5 M8,3 V6.5 M16,3 V6.5",
+        "M8.5,15 L10.7,17 L15.5,12.5",
+    )
+    val Stats = icon("stats", "M5,20 V13 M12,20 V5 M19,20 V9 M3,20.5 H21")
+    val Routine = icon(
+        "routine",
+        "M9,6 H20 M9,12 H20 M9,18 H20",
+        fills = listOf(
+            "M3.5,6 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0",
+            "M3.5,12 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0",
+            "M3.5,18 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0",
+        ),
+    )
+    val Assistant = icon(
+        "assistant",
+        "M5,4.5 H19 a2,2 0 0,1 2,2 V15 a2,2 0 0,1 -2,2 H11 L6.5,20.5 V17 H5 a2,2 0 0,1 -2,-2 V6.5 a2,2 0 0,1 2,-2 Z",
+        "M12,7.5 L12.9,9.9 L15.3,10.8 L12.9,11.7 L12,14.1 L11.1,11.7 L8.7,10.8 L11.1,9.9 Z",
+        width = 1.8f,
+    )
+    val Mic = icon(
+        "mic",
+        "M12,3 a3,3 0 0,1 3,3 V12 a3,3 0 0,1 -6,0 V6 a3,3 0 0,1 3,-3 Z",
+        "M5.5,11.5 a6.5,6.5 0 0,0 13,0 M12,18 V21.5 M8.5,21.5 H15.5",
+    )
+    val Camera = icon(
+        "camera",
+        "M4,7.5 H7.5 L9.3,5 H14.7 L16.5,7.5 H20 a1.5,1.5 0 0,1 1.5,1.5 V18 a1.5,1.5 0 0,1 -1.5,1.5 H4 a1.5,1.5 0 0,1 -1.5,-1.5 V9 A1.5,1.5 0 0,1 4,7.5 Z",
+        "M8.5,13 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0",
+    )
+    val Image = icon(
+        "image",
+        "M5,4 H19 a1.5,1.5 0 0,1 1.5,1.5 V18.5 a1.5,1.5 0 0,1 -1.5,1.5 H5 a1.5,1.5 0 0,1 -1.5,-1.5 V5.5 A1.5,1.5 0 0,1 5,4 Z",
+        "M3.5,16.5 L8.5,11.5 L13,16 L15.5,13.5 L20.5,18.5",
+        "M14.5,8.5 a1.5,1.5 0 1,0 3,0 a1.5,1.5 0 1,0 -3,0",
+    )
+    val Stop = icon("stop", fills = listOf("M7,7 H17 V17 H7 Z"))
+    val Dumbbell = icon(
+        "dumbbell",
+        "M2.5,10 V14 M21.5,10 V14 M7.5,12 H16.5",
+        "M5,7 V17 M19,7 V17",
+        width = 2.6f,
+    )
+    val Flame = icon(
+        "flame",
+        fills = listOf(
+            "M12,2.5 C12.6,5.6 15.5,7.7 17.3,10.2 C18.5,11.9 19,13.4 19,15 a7,7 0 0,1 -14,0 C5,12.8 6.1,10.9 7.6,9.6 C7.7,11.4 8.6,12.6 10,13.1 C9.4,9.5 10.6,5.4 12,2.5 Z"
+        ),
+    )
+    val Trophy = icon(
+        "trophy",
+        "M7,4 H17 V10 a5,5 0 0,1 -10,0 Z",
+        "M7,6 H4 V8 a3,3 0 0,0 3,3 M17,6 H20 V8 a3,3 0 0,1 -3,3 M12,15 V18 M8,21 H16 M9.5,18 H14.5 V21 H9.5 Z",
+    )
+    val Bell = icon(
+        "bell",
+        "M6,16.5 V11 a6,6 0 0,1 12,0 V16.5 L19.5,18 H4.5 Z",
+        "M10,20.5 a2,2 0 0,0 4,0",
+    )
+}

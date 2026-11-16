@@ -7,11 +7,14 @@ import kotlinx.serialization.json.Json
 @Serializable
 data class Backup(
     val app: String = "keeptrack",
-    val version: Int = 1,
+    val version: Int = 2,
     val exportedAt: Long = 0,
     val blocks: List<Block> = emptyList(),
     val entries: List<DayEntry> = emptyList(),
     val days: List<DayInfo> = emptyList(),
+    val tasks: List<Task> = emptyList(),
+    val gymSessions: List<GymSession> = emptyList(),
+    val gymSets: List<GymSet> = emptyList(),
     val settings: BackupSettings = BackupSettings(),
 ) {
     fun toJson(): String = json.encodeToString(serializer(), this)
@@ -24,7 +27,7 @@ data class Backup(
             val b = json.decodeFromString(serializer(), text)
             // "rutina" es el identificador de las copias hechas antes del cambio de nombre.
             require(b.app == "keeptrack" || b.app == "rutina") { "El archivo no es una copia de seguridad de KeepTrack" }
-            require(b.version <= 1) { "La copia es de una versión más nueva de la app" }
+            require(b.version <= 2) { "La copia es de una versión más nueva de la app" }
             return b
         }
     }

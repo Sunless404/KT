@@ -15,6 +15,7 @@ import com.sunless404.keeptrack.R
 import com.sunless404.keeptrack.data.DayEntry
 import com.sunless404.keeptrack.data.DayType
 import com.sunless404.keeptrack.data.Status
+import com.sunless404.keeptrack.data.Task
 import com.sunless404.keeptrack.domain.fmtTime
 import com.sunless404.keeptrack.widget.RoutineWidget
 import kotlinx.coroutines.sync.Mutex
@@ -39,6 +40,7 @@ class Alarms(private val app: App) {
         val startAt: Long = at,
         val endAt: Long = at,
         val refresh: Boolean = false,
+        val task: Task? = null,
     )
 
     fun canScheduleExact(): Boolean =
@@ -53,7 +55,7 @@ class Alarms(private val app: App) {
         val events = events()
 
         events.filter { it.at > prefs.lastHandled && it.at <= now }.forEach { ev ->
-            if (ev.refresh) Unit else if (ev.entry == null) notifyEndOfDay() else if (now < ev.endAt) notifyEntry(ev.entry, ev.startAt, ev.endAt)
+            if (ev.task != null) notifyTask(ev.task) else if (ev.refresh) Unit else if (ev.entry == null) notifyEndOfDay() else if (now < ev.endAt) notifyEntry(ev.entry, ev.startAt, ev.endAt)
         }
         prefs.lastHandled = now
 
@@ -97,6 +99,7 @@ class Alarms(private val app: App) {
                 }
             }
         }
+        app.repo.pendingReminders().forEach { t -> out += Event(t.remindAt!!, null, task = t) }
         if (prefs.endOfDayEnabled) {
             for (d in 0L..1L) {
                 val at = today.plusDays(d).atStartOfDay(zone).plusMinutes(prefs.endOfDayMin.toLong())
@@ -205,6 +208,32 @@ class Alarms(private val app: App) {
         }
     }
 
+    private fun notifyTask(t: Task) {
+        if (!nm.areNotificationsEnabled()) return
+        val whenText = t.timeMin?.let { "Tarea a las ${fmtTime(it)}" } ?: "Tarea de hoy"
+        val n = NotificationCompat.Builder(app, channel(nowIsQuiet()))
+            .setSmallIcon(R.drawable.ic_stat)
+            .setContentTitle(t.title)
+            .setContentText(if (t.description.isNotBlank()) t.description else whenText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(listOf(whenText, t.description).filter { it.isNotBlank() }.joinToString("\n")))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(openApp())
+            .setAutoCancel(true)
+            .addAction(0, "Hecha", PendingIntent.getBroadcast(
+                app, (TASK_ID_BASE + t.id).toInt(),
+                Intent(app, AlarmReceiver::class.java).setAction(ACTION_TASK_DONE).putExtra(EXTRA_ENTRY, t.id),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            ))
+            .build()
+        try {
+            nm.notify((TASK_ID_BASE + t.id).toInt(), n)
+        } catch (_: SecurityException) {
+        }
+    }
+
+    fun cancelTaskNotification(taskId: Long) = nm.cancel((TASK_ID_BASE + taskId).toInt())
+
     /** Notificación de prueba desde Ajustes. */
     fun notifyTest() {
         val n = NotificationCompat.Builder(app, channel(false))
@@ -228,6 +257,9 @@ class Alarms(private val app: App) {
         const val ACTION_DONE = "com.sunless404.keeptrack.DONE"
         const val ACTION_SNOOZE = "com.sunless404.keeptrack.SNOOZE"
         const val ACTION_SKIP = "com.sunless404.keeptrack.SKIP"
+        const val ACTION_TASK_DONE = "com.sunless404.keeptrack.TASK_DONE"
+        /** Los ids de notificación de tareas empiezan aquí para no chocar con los de bloques. */
+        private const val TASK_ID_BASE = 1_000_000_000L
         const val EXTRA_ENTRY = "entry"
         const val SNOOZE_MS = 10 * 60_000L
         private const val END_OF_DAY_ID = -1

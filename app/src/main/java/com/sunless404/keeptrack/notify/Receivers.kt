@@ -19,6 +19,11 @@ class AlarmReceiver : BroadcastReceiver() {
                     Alarms.ACTION_DONE -> mark(app, id, Status.HECHO)
                     Alarms.ACTION_SKIP -> mark(app, id, Status.SALTADO)
                     Alarms.ACTION_SNOOZE -> mark(app, id, Status.POSPUESTO)
+                    Alarms.ACTION_TASK_DONE -> {
+                        app.alarms.cancelTaskNotification(id)
+                        app.repo.setTaskDone(id, true)
+                        app.alarms.sync()
+                    }
                     else -> app.alarms.sync()
                 }
             } finally {

@@ -18,6 +18,10 @@ android {
         versionName = "1.0"
     }
 
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -35,6 +39,14 @@ android {
             "-opt-in=androidx.compose.foundation.layout.ExperimentalLayoutApi",
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
         )
+    }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all {
+            // Las capturas son lentas: solo con -Pcapturas.
+            if (!project.hasProperty("capturas")) it.exclude("**/screens/**")
+            else it.systemProperty("roborazzi.test.record", "true")
+        }
     }
     buildFeatures {
         compose = true
@@ -58,4 +70,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     testImplementation("junit:junit:4.13.2")
+    // Capturas de pantalla en la JVM (sin emulador), solo para revisar el diseño.
+    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.40.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

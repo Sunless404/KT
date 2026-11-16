@@ -1,7 +1,39 @@
 package com.sunless404.keeptrack.ui.stats
 
 import android.app.Application
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextAlign
+import com.sunless404.keeptrack.domain.Habit
+import com.sunless404.keeptrack.ui.common.KtIcons
+import com.sunless404.keeptrack.ui.common.ProgressRing
+import com.sunless404.keeptrack.ui.common.SectionLabel
+import com.sunless404.keeptrack.ui.theme.Brand
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -88,100 +120,174 @@ class StatsViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun StatsScreen(vm: StatsViewModel) {
+fun StatsScreen(vm: StatsViewModel, onOpenGym: () -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
+    // Se activa al entrar: las animaciones arrancan desde cero.
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
 
-    ScreenScaffold(title = "Estadísticas") { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { vm.shift(-1) }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Semana anterior")
-                    }
-                    Column(Modifier.weight(1f)) {
-                        Text("Horas por categoría", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Semana del ${fmtShortDate(ui.monday)} al ${fmtShortDate(ui.monday.plusDays(6))}",
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    IconButton(onClick = { vm.shift(1) }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Semana siguiente")
-                    }
-                }
-            }
-            if (ui.hours.isEmpty()) item { Text("Sin datos esta semana.") }
-            items(ui.hours, key = { it.category }) { h -> HoursRow(h) }
-
-            item {
-                Spacer(Modifier.height(8.dp))
-                Text("Rachas", style = MaterialTheme.typography.titleMedium)
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item {
+            Column(Modifier.padding(start = 4.dp, top = 8.dp)) {
+                Text("Estadísticas", style = MaterialTheme.typography.headlineMedium)
                 Text(
-                    "Días seguidos cumpliendo el hábito. Festivos, días libres y días sin ese bloque no cuentan. " +
-                        "Sueño a su hora: marcado como hecho a ±${Stats.SLEEP_TOLERANCE_MIN} min de su inicio.",
-                    style = MaterialTheme.typography.bodySmall,
+                    "Rachas, horas y semanas anteriores",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            items(ui.streaks, key = { it.habit }) { s ->
-                Card(Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(s.habit.label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                if (s.current == 1) "1 día" else "${s.current} días",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = s.habit.category.composeColor,
+        }
+        item { SectionLabel("Rachas") }
+        item {
+            val rows = ui.streaks.chunked(2)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                rows.forEachIndexed { r, pair ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        pair.forEachIndexed { c, s ->
+                            StreakCard(
+                                s,
+                                visible = shown,
+                                delayMs = (r * 2 + c) * 90,
+                                onClick = if (s.habit == Habit.GIMNASIO) onOpenGym else null,
+                                modifier = Modifier.weight(1f),
                             )
-                            Text("Mejor: ${s.best}", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
             }
+        }
+        item {
+            Text(
+                "Festivos, días libres y días sin ese bloque no cuentan. Sueño a su hora: marcado ±${Stats.SLEEP_TOLERANCE_MIN} min de su inicio.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
 
-            item {
-                Spacer(Modifier.height(8.dp))
-                Text("Historial de semanas", style = MaterialTheme.typography.titleMedium)
+        item {
+            SectionLabel("Horas por categoría") {
+                IconButton(onClick = { vm.shift(-1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Semana anterior") }
+                IconButton(onClick = { vm.shift(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Semana siguiente") }
             }
-            if (ui.history.isEmpty()) item { Text("Aún no hay semanas registradas.") }
-            items(ui.history, key = { it.mondayEpoch }) { w ->
-                val m = LocalDate.ofEpochDay(w.mondayEpoch)
-                Column(Modifier.fillMaxWidth().clickable { vm.setWeek(w.mondayEpoch) }.padding(vertical = 4.dp)) {
-                    Row {
-                        Text(
-                            "${fmtShortDate(m)} – ${fmtShortDate(m.plusDays(6))}",
-                            modifier = Modifier.weight(1f),
-                            fontWeight = if (m == ui.monday) FontWeight.Bold else FontWeight.Normal,
-                        )
-                        Text("${w.percent} % (${w.done}/${w.total})")
+        }
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                shape = MaterialTheme.shapes.large,
+            ) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Semana del ${fmtShortDate(ui.monday)} al ${fmtShortDate(ui.monday.plusDays(6))}",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                    val planned = ui.hours.sumOf { it.plannedMin }
+                    val done = ui.hours.sumOf { it.doneMin }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ProgressRing(if (planned == 0) 0f else done.toFloat() / planned, size = 64.dp, stroke = 7.dp) {
+                            Text("${if (planned == 0) 0 else done * 100 / planned}%", style = MaterialTheme.typography.labelLarge)
+                        }
+                        Spacer(Modifier.width(14.dp))
+                        Column {
+                            Text("${fmtDuration(done)} hechas", style = MaterialTheme.typography.titleMedium)
+                            Text("de ${fmtDuration(planned)} previstas", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                    LinearProgressIndicator(progress = { w.percent / 100f }, modifier = Modifier.fillMaxWidth().height(6.dp))
+                    if (ui.hours.isEmpty()) Text("Sin datos esta semana.", style = MaterialTheme.typography.bodySmall)
+                    ui.hours.forEach { h -> HoursRow(h, shown) }
                 }
             }
-            item { Spacer(Modifier.height(16.dp)) }
+        }
+
+        item { SectionLabel("Historial de semanas") }
+        if (ui.history.isEmpty()) item { Text("Aún no hay semanas registradas.", style = MaterialTheme.typography.bodySmall) }
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), shape = MaterialTheme.shapes.large) {
+                Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                    ui.history.forEach { w ->
+                        val m = LocalDate.ofEpochDay(w.mondayEpoch)
+                        val sel = m == ui.monday
+                        Row(
+                            Modifier.fillMaxWidth().clickable { vm.setWeek(w.mondayEpoch) }.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "${fmtShortDate(m)} – ${fmtShortDate(m.plusDays(6))}",
+                                modifier = Modifier.width(120.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                            )
+                            AnimatedBar(w.percent / 100f, MaterialTheme.colorScheme.secondary, shown, Modifier.weight(1f))
+                            Text("${w.percent}%", modifier = Modifier.width(48.dp), style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.End)
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun HoursRow(h: CategoryHours) {
+private fun StreakCard(s: Streak, visible: Boolean, delayMs: Int, onClick: (() -> Unit)?, modifier: Modifier) {
+    val count by animateIntAsState(if (visible) s.current else 0, tween(900, delayMs, FastOutSlowInEasing), label = "racha")
+    val appear by animateFloatAsState(if (visible) 1f else 0f, tween(450, delayMs), label = "aparece")
+    val pulse = rememberInfiniteTransition(label = "llama")
+    val scale by pulse.animateFloat(
+        initialValue = 1f, targetValue = if (s.current > 0) 1.15f else 1f,
+        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "escala",
+    )
+    val color = s.habit.category.composeColor
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        shape = MaterialTheme.shapes.large,
+        modifier = modifier
+            .graphicsLayer { alpha = appear; translationY = (1 - appear) * 40f }
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(s.habit.label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f), maxLines = 1)
+                Icon(
+                    if (s.habit == Habit.GIMNASIO) KtIcons.Dumbbell else KtIcons.Flame, null,
+                    tint = if (s.current > 0) Brand.Fire else MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.size(22.dp).scale(if (s.habit == Habit.GIMNASIO) 1f else scale),
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("$count", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = color)
+                Text(if (s.current == 1) " día" else " días", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 6.dp))
+            }
+            Text("Mejor: ${s.best}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun AnimatedBar(fraction: Float, color: Color, visible: Boolean, modifier: Modifier = Modifier) {
+    val f by animateFloatAsState(if (visible) fraction.coerceIn(0f, 1f) else 0f, tween(800, easing = FastOutSlowInEasing), label = "barra")
+    Box(modifier.height(10.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
+        Box(Modifier.fillMaxHeight().fillMaxWidth(f).clip(CircleShape).background(color))
+    }
+}
+
+@Composable
+private fun HoursRow(h: CategoryHours, visible: Boolean) {
     Column(Modifier.fillMaxWidth()) {
-        Row {
-            Text(h.category.label, modifier = Modifier.weight(1f))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(10.dp).clip(CircleShape).background(h.category.composeColor))
+            Text("  ${h.category.label}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
             Text(
-                "${fmtDuration(h.doneMin)} de ${fmtDuration(h.plannedMin)}",
-                style = MaterialTheme.typography.bodyMedium,
+                "${fmtDuration(h.doneMin)} / ${fmtDuration(h.plannedMin)}",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        LinearProgressIndicator(
-            progress = { if (h.plannedMin == 0) 0f else h.doneMin.toFloat() / h.plannedMin },
-            color = h.category.composeColor,
-            modifier = Modifier.fillMaxWidth().height(10.dp),
-        )
+        Spacer(Modifier.height(4.dp))
+        AnimatedBar(if (h.plannedMin == 0) 0f else h.doneMin.toFloat() / h.plannedMin, h.category.composeColor, visible)
     }
 }

@@ -86,133 +86,7 @@ class EditViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun EditScreen(vm: EditViewModel, onImport: () -> Unit = {}) {
-    val blocks by vm.blocks.collectAsStateWithLifecycle()
-    var day by rememberSaveable { mutableIntStateOf(LocalDate.now().dayOfWeek.value) }
-    var editing by remember { mutableStateOf<Block?>(null) }
-    var copyDialog by remember { mutableStateOf(false) }
-    var toDelete by remember { mutableStateOf<Block?>(null) }
-    val dayBlocks = blocks.filter { it.dayOfWeek == day }
-
-    ScreenScaffold(
-        title = "Editar rutina",
-        actions = {
-            TextButton(onClick = onImport) { Text("Importar / IA") }
-            TextButton(onClick = { copyDialog = true }) { Text("Copiar día") }
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                val start = dayBlocks.filter { !it.crossesMidnight }.maxOfOrNull { it.endMin } ?: (8 * 60)
-                editing = Block(
-                    title = "", category = Category.OTRO, dayOfWeek = day,
-                    startMin = start.coerceAtMost(23 * 60), endMin = (start + 60).coerceAtMost(1439),
-                )
-            }) { Icon(Icons.Default.Add, "Nuevo bloque") }
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            ScrollableTabRow(selectedTabIndex = day - 1, edgePadding = 8.dp) {
-                DAY_NAMES.forEachIndexed { i, name ->
-                    Tab(selected = day == i + 1, onClick = { day = i + 1 }, text = { Text(name) })
-                }
-            }
-            LazyColumn(
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                if (dayBlocks.isEmpty()) item { Text("Sin bloques. Pulsa + para añadir uno.") }
-                items(dayBlocks, key = { it.id }) { b ->
-                    BlockRow(
-                        b,
-                        conflicts = conflictsOf(b, blocks),
-                        onEdit = { editing = b },
-                        onDuplicate = { vm.duplicate(b.id) },
-                        onDelete = { toDelete = b },
-                    )
-                }
-                item { Spacer(Modifier.height(80.dp)) }
-            }
-        }
-    }
-
-    editing?.let { b ->
-        BlockEditorDialog(b, blocks, onDismiss = { editing = null }) { block, days ->
-            vm.save(block, days)
-            editing = null
-        }
-    }
-
-    toDelete?.let { b ->
-        AlertDialog(
-            onDismissRequest = { toDelete = null },
-            title = { Text("Borrar bloque") },
-            text = { Text("¿Borrar «${b.title}» del ${dayName(b.dayOfWeek).lowercase()}? El historial de días pasados no cambia.") },
-            confirmButton = { TextButton(onClick = { vm.delete(b.id); toDelete = null }) { Text("Borrar") } },
-            dismissButton = { TextButton(onClick = { toDelete = null }) { Text("Cancelar") } },
-        )
-    }
-
-    if (copyDialog) {
-        CopyDayDialog(from = day, onDismiss = { copyDialog = false }) { targets ->
-            targets.forEach { vm.copyDay(day, it) }
-            copyDialog = false
-        }
-    }
-}
-
-@Composable
-private fun BlockRow(
-    b: Block,
-    conflicts: List<Block>,
-    onEdit: () -> Unit,
-    onDuplicate: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    var menu by remember { mutableStateOf(false) }
-    Card(Modifier.fillMaxWidth().clickable(onClick = onEdit)) {
-        Row(Modifier.height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.width(8.dp).fillMaxHeight().background(b.category.composeColor))
-            Column(Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                Text(
-                    fmtRange(b.startMin, b.endMin) + (if (b.crossesMidnight) " (+1 día)" else "") +
-                        " · " + fmtDuration(b.durationMin),
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Text(b.title, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    b.category.label + if (b.notify) " · con aviso" else " · sin aviso",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                if (conflicts.isNotEmpty()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Warning, null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.height(16.dp),
-                        )
-                        Text(
-                            " Se solapa con " + conflicts.joinToString { it.title },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-            }
-            Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "Más") }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("Modificar") }, onClick = { menu = false; onEdit() })
-                    DropdownMenuItem(text = { Text("Duplicar") }, onClick = { menu = false; onDuplicate() })
-                    DropdownMenuItem(text = { Text("Borrar") }, onClick = { menu = false; onDelete() })
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BlockEditorDialog(
+internal fun BlockEditorDialog(
     initial: Block,
     all: List<Block>,
     onDismiss: () -> Unit,
@@ -324,7 +198,7 @@ private fun BlockEditorDialog(
 }
 
 @Composable
-private fun CopyDayDialog(from: Int, onDismiss: () -> Unit, onConfirm: (Set<Int>) -> Unit) {
+internal fun CopyDayDialog(from: Int, onDismiss: () -> Unit, onConfirm: (Set<Int>) -> Unit) {
     var targets by remember { mutableStateOf(emptySet<Int>()) }
     AlertDialog(
         onDismissRequest = onDismiss,

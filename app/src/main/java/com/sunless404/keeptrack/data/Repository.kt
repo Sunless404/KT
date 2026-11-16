@@ -100,6 +100,59 @@ class Repository(private val db: AppDatabase) {
         onChanged()
     }
 
+    // ---------- Tareas ----------
+
+    fun observeTasks(from: LocalDate, to: LocalDate): Flow<List<Task>> =
+        dao.observeTasks(from.toEpochDay(), to.toEpochDay())
+
+    suspend fun pendingReminders(): List<Task> = dao.pendingReminders()
+
+    suspend fun saveTask(task: Task) {
+        dao.upsertTask(task)
+        onChanged()
+    }
+
+    suspend fun addTasks(tasks: List<Task>) {
+        dao.insertTasks(tasks)
+        onChanged()
+    }
+
+    suspend fun setTaskDone(id: Long, done: Boolean) {
+        val t = dao.task(id) ?: return
+        dao.upsertTask(t.copy(done = done, doneAt = if (done) System.currentTimeMillis() else null))
+        onChanged()
+    }
+
+    suspend fun deleteTask(id: Long) {
+        dao.deleteTask(id)
+        onChanged()
+    }
+
+    // ---------- Gimnasio ----------
+
+    fun observeGymSessions(): Flow<List<GymSession>> = dao.observeGymSessions()
+    fun observeGymSets(): Flow<List<GymSet>> = dao.observeGymSets()
+
+    /** Guarda la sesión con sus series (sustituye las anteriores). Devuelve el id. */
+    suspend fun saveGymSession(session: GymSession, sets: List<GymSet>): Long {
+        val id = db.withTransaction {
+            val newId = dao.upsertGymSession(session).let { if (session.id != 0L) session.id else it }
+            dao.deleteGymSetsOf(newId)
+            dao.insertGymSets(sets.mapIndexed { i, s -> s.copy(id = 0, sessionId = newId, position = i) })
+            newId
+        }
+        onChanged()
+        return id
+    }
+
+    suspend fun deleteGymSession(id: Long) {
+        db.withTransaction {
+            dao.deleteGymSetsOf(id)
+            dao.deleteGymSession(id)
+        }
+        onChanged()
+    }
+
     // ---------- Plantilla ----------
 
     fun observeBlocks(): Flow<List<Block>> = dao.observeBlocks()
@@ -174,6 +227,9 @@ class Repository(private val db: AppDatabase) {
             blocks = dao.allBlocks(),
             entries = dao.allEntries(),
             days = dao.allDays(),
+            tasks = dao.allTasks(),
+            gymSessions = dao.allGymSessions(),
+            gymSets = dao.allGymSets(),
             settings = settings,
         )
     }
@@ -185,7 +241,13 @@ class Repository(private val db: AppDatabase) {
                 dao.deleteAllBlocks()
                 dao.deleteAllEntries()
                 dao.deleteAllDays()
+                dao.deleteAllTasks()
+                dao.deleteAllGymSets()
+                dao.deleteAllGymSessions()
                 dao.insertBlocks(backup.blocks)
+                dao.insertTasks(backup.tasks)
+                backup.gymSessions.forEach { dao.upsertGymSession(it) }
+                dao.insertGymSets(backup.gymSets)
                 dao.insertEntries(backup.entries)
                 dao.upsertDays(backup.days)
             }

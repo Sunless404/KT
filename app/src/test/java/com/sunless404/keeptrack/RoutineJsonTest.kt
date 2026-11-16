@@ -1,7 +1,6 @@
 package com.sunless404.keeptrack
 
 import com.sunless404.keeptrack.data.SampleRoutine
-import com.sunless404.keeptrack.domain.AiPrompt
 import com.sunless404.keeptrack.domain.RoutineJson
 import com.sunless404.keeptrack.domain.RoutineParser
 import org.junit.Assert.assertEquals
@@ -29,11 +28,5 @@ class RoutineJsonTest {
         val groups = json["bloques"].toString()
         // "Dormir" 23:00-07:00 de lunes a viernes y domingo va en un solo bloque.
         assertTrue(groups.contains("""["lunes","martes","miercoles","jueves","viernes","domingo"]"""))
-    }
-
-    @Test
-    fun requestIncludesCurrentRoutineOnlyWhenGiven() {
-        assertTrue(AiPrompt.request("hola", "{}").contains("Rutina actual"))
-        assertTrue(AiPrompt.request("hola", null).contains("crea una nueva"))
     }
 }

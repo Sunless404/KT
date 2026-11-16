@@ -3,6 +3,7 @@ package com.sunless404.keeptrack.ai
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -90,22 +91,20 @@ object Gemini {
         )
     }
 
-    /** Envía [prompt] y devuelve el texto de la respuesta, que se pide en formato JSON. */
-    suspend fun generateJson(apiKey: String, model: String, system: String, prompt: String): String =
+    /**
+     * Envía una conversación ([contents] en el formato de la API: role + parts) y
+     * devuelve el texto de la respuesta, pedida en JSON.
+     */
+    suspend fun generate(apiKey: String, model: String, system: String, contents: JsonArray): String =
         withContext(Dispatchers.IO) {
             val body = buildJsonObject {
                 put("systemInstruction", buildJsonObject {
                     put("parts", buildJsonArray { add(buildJsonObject { put("text", system) }) })
                 })
-                put("contents", buildJsonArray {
-                    add(buildJsonObject {
-                        put("role", "user")
-                        put("parts", buildJsonArray { add(buildJsonObject { put("text", prompt) }) })
-                    })
-                })
+                put("contents", contents)
                 put("generationConfig", buildJsonObject {
                     put("responseMimeType", "application/json")
-                    put("temperature", 0.2)
+                    put("temperature", 0.3)
                 })
             }
             val res = request("models/$model:generateContent", apiKey, body.toString())
@@ -116,7 +115,7 @@ object Gemini {
             if (text.isNullOrBlank()) {
                 val reason = candidate?.get("finishReason")?.jsonPrimitive?.content
                     ?: (res["promptFeedback"] as? JsonObject)?.get("blockReason")?.jsonPrimitive?.content
-                throw AiException("Gemini no ha devuelto ninguna rutina" + (reason?.let { " ($it)" } ?: "") + ". Prueba a reformular la petición.")
+                throw AiException("Gemini no ha respondido" + (reason?.let { " ($it)" } ?: "") + ". Prueba a reformular el mensaje.")
             }
             text
         }

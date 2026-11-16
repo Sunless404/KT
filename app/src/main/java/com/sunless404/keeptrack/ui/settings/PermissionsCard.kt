@@ -11,7 +11,12 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.ui.Alignment
+import com.sunless404.keeptrack.ui.common.KtIcons
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -91,12 +96,30 @@ fun PermissionsCard(always: Boolean = false, modifier: Modifier = Modifier) {
     val batteryPending = !state.battery && (always || !hideBattery)
     if (!always && state.notifications && state.exact && !batteryPending) return
 
+    // En Hoy se muestra plegada: una línea con el número de permisos que faltan.
+    var open by remember { mutableStateOf(always) }
+    val missing = listOf(!state.notifications, !state.exact, batteryPending).count { it }
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+        shape = MaterialTheme.shapes.large,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(12.dp)) {
-            Text("Permisos para los avisos", style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(
+                Modifier.fillMaxWidth().then(if (always) Modifier else Modifier.clickable { open = !open }),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(KtIcons.Bell, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text("Permisos para los avisos", style = MaterialTheme.typography.titleSmall)
+                    if (missing > 0) Text(
+                        if (missing == 1) "Falta 1 permiso" else "Faltan $missing permisos",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (!always) Text(if (open) "Ocultar" else "Revisar", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.tertiary)
+            }
+            if (!open) return@Column
 
             Item(
                 ok = state.notifications,

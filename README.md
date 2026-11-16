@@ -41,7 +41,7 @@ si no coincide. Si ocurre, exporta una copia de seguridad, desinstala e instala.
 
 ## Primer arranque
 
-1. La app trae una rutina de ejemplo. Sustitúyela en Rutina > Importar o edítala.
+1. La app trae una rutina de ejemplo. Cámbiala desde Rutina o pídeselo al Asistente.
 2. En la pantalla Hoy aparece una tarjeta de permisos. Concede notificaciones,
    alarmas exactas y la exclusión de la optimización de batería; sin ellos los
    avisos pueden no llegar o llegar tarde.
@@ -49,54 +49,35 @@ si no coincide. Si ocurre, exporta una copia de seguridad, desinstala e instala.
 
 ## Pantallas
 
-- **Hoy**: línea de tiempo, bloque en curso, cuenta atrás al siguiente, tick para
-  marcar hecho y pulsación larga para saltar o posponer. Botón Imprevisto y
-  tipo de día (normal, festivo, libre).
-- **Semana**: los 7 días con sus bloques por colores y el porcentaje completado.
-- **Estadísticas**: horas previstas y hechas por categoría, rachas e historial.
-- **Rutina**: crear, modificar, duplicar y borrar bloques, copiar un día en otro,
-  aviso de solapamientos, e Importar.
-- **Ajustes** (rueda en Hoy): avisos, horas de silencio, permisos y copia de seguridad.
+- **Hoy**: desliza a los lados para cambiar de día. Arriba, la semana; debajo, el
+  progreso del día, el bloque en curso con su cuenta atrás, las tareas extra de ese
+  día y la línea de tiempo de la rutina. Tick para marcar; pulsación larga para
+  saltar o posponer. Botón Imprevisto y tipo de día (normal, festivo, libre).
+- **Tareas**: calendario mensual con el día de hoy en un círculo y las tareas bajo
+  cada número. Al tocar un día se abre el detalle. "Nueva tarea" pide nombre, día,
+  hora (opcional), descripción (opcional) y si quieres recordatorio y a qué hora.
+- **Estadísticas**: rachas animadas, horas previstas y hechas por categoría e
+  historial de semanas. Tocar la racha de gimnasio abre una sección secreta.
+- **Rutina**: lunes a domingo; al tocar un día se despliega su rutina para
+  añadir, modificar, duplicar o borrar bloques y copiar el día en otros.
+- **Asistente**: chat con IA (texto, fotos de la galería o la cámara y notas de voz).
+- **Ajustes** (rueda en Hoy): avisos, horas de silencio, permisos, clave de la IA y
+  copia de seguridad.
 
-## Importar una rutina
+## Gimnasio (sección secreta)
 
-Rutina > Importar. Pega el texto y pulsa Analizar; el formato se detecta solo.
-Antes de guardar se muestra una vista previa con los bloques por día, las líneas
-no entendidas (editables), solapamientos, huecos y horas de sueño por noche.
+Registra sesiones con ejercicios, series, peso y repeticiones. Puntos:
 
-### Formato A: texto
+- Máximo estimado a 1 repetición (Epley): peso × (1 + reps / 30), hasta 12 reps.
+- Fuerza relativa: ese máximo dividido por tu peso corporal.
+- Semanal (se reinicia el lunes): 10 por sesión (hasta 5), por cada récord
+  5 × % de mejora (entre 5 y 50; un ejercicio nuevo da 5) y 5 por cada semana
+  seguida yendo (hasta 25).
+- Histórica: suma de la fuerza relativa de tus 5 mejores ejercicios × 100.
 
-Una cabecera por día y una línea por bloque. La categoría entre corchetes es
-opcional: si falta, se deduce del título.
+## Formato de rutina (JSON)
 
-```
-Lunes
-08:00-09:00 DIW [clase]
-12:30-12:45 Vuelta a casa [desplazamiento]
-
-Martes y jueves
-17:00-19:00 Academia de inglés
-
-Lunes a viernes
-23:00-07:00 Dormir
-```
-
-Se aceptan:
-
-- Guiones `-`, `–`, `—` y también `a` o `hasta` entre las horas.
-- Horas como `8:00`, `08.00`, `8h`, `8h30`, `8`.
-- Días con o sin tilde, abreviados (`lun`, `mié`, `X`), rangos (`Lunes a viernes`,
-  `L-V`), listas (`martes y jueves`), `entre semana`, `fin de semana`, `todos los días`.
-- Viñetas y listas numeradas delante de la línea.
-- Tablas Markdown con columnas `Hora | Actividad | Duración`. `Hora` puede ser un
-  rango o solo el inicio; en ese caso el fin sale de `Duración` (`1h`, `45 min`,
-  `1h 30min`, `1,5 h`) o del inicio de la fila siguiente. Columnas opcionales:
-  `Día` y `Categoría`.
-
-Un bloque cuyo fin es menor que su inicio cruza la medianoche y pertenece al
-día en que empieza.
-
-### Formato B: JSON
+Es el formato que usa el asistente para proponer rutinas.
 
 ```json
 {
@@ -129,12 +110,13 @@ día en que empieza.
 También se acepta directamente la lista de bloques sin el objeto exterior, y el
 JSON dentro de un bloque de código Markdown.
 
-### Asistente IA (Google Gemini, gratis)
+## Asistente IA (Google Gemini, gratis)
 
-En Rutina > Importar / IA puedes pedir en lenguaje natural una rutina nueva o
-cambios en la actual ("pasa el gimnasio al martes a las 19:00"). La respuesta
-pasa por la misma vista previa que el importador y no se guarda nada hasta que
-confirmas.
+En la pestaña Asistente puedes pedir una rutina nueva, cambios en la actual
+("pasa el gimnasio al martes a las 19:00") o tareas ("dentista el viernes a las
+17:00"), por escrito, con una foto (por ejemplo de tu horario de clases) o con
+una nota de voz. Los cambios aparecen en una tarjeta y solo se guardan si pulsas
+"Aplicar".
 
 Configuración, una sola vez, en Ajustes > Asistente IA:
 
@@ -143,18 +125,12 @@ Configuración, una sola vez, en Ajustes > Asistente IA:
 2. Pégala y pulsa "Guardar y probar". La app lista los modelos de tu clave y
    elige uno "flash", que son los del plan gratuito.
 
-Qué se envía: tu petición y, si está marcado "Partir de mi rutina actual", la
-plantilla semanal en el JSON de arriba. El historial, las estadísticas y los
-ajustes no se envían. En el plan gratuito Google puede usar ese contenido para
+Qué se envía: tus mensajes y adjuntos, la plantilla semanal y las tareas de los
+próximos 30 días. El historial, las estadísticas, el gimnasio y los ajustes no
+se envían. En el plan gratuito Google puede usar ese contenido para
 mejorar sus productos. La clave se guarda cifrada con el Android Keystore y no
 va en la copia de seguridad. Si se alcanza el límite gratuito, la app lo dice y
 basta con esperar.
-
-### Prompt para IA
-
-El botón "Copiar prompt para IA" copia unas instrucciones con este esquema.
-Pégalas en cualquier asistente junto a tus horarios y pega aquí el JSON que te
-devuelva. La app no llama a ninguna IA ni usa la red.
 
 ## Avisos
 
@@ -168,7 +144,7 @@ devuelva. La app no llama a ninguna IA ni usa la red.
 ## Copia de seguridad
 
 Ajustes > Copia de seguridad. Exportar guarda un JSON con la plantilla, el
-historial, los días especiales y los ajustes. Importar sustituye todos los datos
+historial, los días especiales, las tareas, el gimnasio y los ajustes. Importar sustituye todos los datos
 de la app por los del archivo.
 
 ## Cómo se guardan los datos
@@ -178,6 +154,10 @@ de la app por los del archivo.
   una copia de la plantilla hecha ese día, así que cambiar la plantilla no altera
   el historial. Los imprevistos solo cambian estas filas.
 - `days`: tipo de cada día (normal, festivo, libre).
+- `tasks`: tareas puntuales con su recordatorio.
+- `gym_sessions` y `gym_sets`: sesiones de gimnasio y sus series.
+
+El esquema de cada versión de la base de datos se guarda en `app/schemas`.
 
 ## Pruebas
 
@@ -185,5 +165,13 @@ de la app por los del archivo.
 ./gradlew testDebugUnitTest
 ```
 
-Cubren el parser de importación (incluidos casos mal formados), solapamientos,
-estadísticas y rachas, imprevistos y la copia de seguridad.
+Cubren el parser de rutinas (incluidos casos mal formados), solapamientos,
+estadísticas y rachas, imprevistos, el asistente, los puntos del gimnasio y la
+copia de seguridad.
+
+Capturas de las pantallas principales sin emulador (Robolectric + Roborazzi),
+en `app/build/capturas`:
+
+```
+./gradlew testDebugUnitTest -Pcapturas --tests '*ScreenshotTest*'
+```

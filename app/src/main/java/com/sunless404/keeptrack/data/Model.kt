@@ -110,3 +110,43 @@ data class DayInfo(
     val type: DayType = DayType.NORMAL,
     val materialized: Boolean = false,
 )
+
+/** Tarea puntual de una fecha (los "pluses" de Hoy). */
+@Serializable
+@Entity(tableName = "tasks", indices = [Index("epochDay")])
+data class Task(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val epochDay: Long,
+    /** Minutos desde las 00:00; null = sin hora. */
+    val timeMin: Int? = null,
+    val title: String,
+    val description: String = "",
+    val notify: Boolean = false,
+    /** Momento del recordatorio (epoch millis). */
+    val remindAt: Long? = null,
+    val done: Boolean = false,
+    val doneAt: Long? = null,
+)
+
+/** Sesión de gimnasio de un día. */
+@Serializable
+@Entity(tableName = "gym_sessions", indices = [Index("epochDay")])
+data class GymSession(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val epochDay: Long,
+    val notes: String = "",
+    /** Peso corporal en kg el día de la sesión (para la fuerza relativa). */
+    val bodyWeightKg: Double? = null,
+)
+
+/** Serie de un ejercicio dentro de una sesión. */
+@Serializable
+@Entity(tableName = "gym_sets", indices = [Index("sessionId")])
+data class GymSet(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val sessionId: Long,
+    val exercise: String,
+    val weightKg: Double,
+    val reps: Int,
+    val position: Int = 0,
+)

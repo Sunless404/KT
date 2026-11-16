@@ -7,20 +7,22 @@ import com.sunless404.keeptrack.App
 import com.sunless404.keeptrack.data.DayEntry
 import com.sunless404.keeptrack.data.DayType
 import com.sunless404.keeptrack.data.Status
+import com.sunless404.keeptrack.data.Task
 import com.sunless404.keeptrack.notify.Alarms
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 
+/** Todo lo que muestra una página (un día) de Hoy. */
 data class TodayUi(
     val date: LocalDate = LocalDate.now(),
     val today: LocalDate = LocalDate.now(),
@@ -30,12 +32,15 @@ data class TodayUi(
     /** Bloques del día anterior que terminan en este (p. ej. el sueño). */
     val carry: List<DayEntry> = emptyList(),
     val dayType: DayType = DayType.NORMAL,
+    val tasks: List<Task> = emptyList(),
 ) {
     val isToday get() = date == today
     val isFuture get() = date > today
 
-    val done get() = entries.count { it.status == Status.HECHO }
-    val progress get() = if (entries.isEmpty()) 0f else done.toFloat() / entries.size
+    private val total get() = entries.size + tasks.size
+    val done get() = entries.count { it.status == Status.HECHO } + tasks.count { it.done }
+    val totalCount get() = total
+    val progress get() = if (total == 0) 0f else done.toFloat() / total
 
     /** Bloque en curso (solo si se está viendo hoy). */
     val current: DayEntry?
@@ -49,37 +54,38 @@ data class TodayUi(
 
 class TodayViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = (app as App).repo
-    private val date = MutableStateFlow(LocalDate.now())
 
-    private val clock = flow {
+    val now: StateFlow<LocalDateTime> = flow {
         while (true) {
             repo.ensureMaterialized()
             emit(LocalDateTime.now())
             delay(15_000)
         }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LocalDateTime.now())
+
+    /** Peticiones de saltar a una fecha (desde otra pantalla o el calendario). */
+    private val _jump = MutableSharedFlow<LocalDate>(extraBufferCapacity = 1)
+    val jump: SharedFlow<LocalDate> = _jump
+
+    fun setDate(d: LocalDate) {
+        _jump.tryEmit(d)
     }
 
-    val ui: StateFlow<TodayUi> = combine(
-        date.flatMapLatest { d -> repo.observeRange(d.minusDays(1), d).map { d to it } },
-        clock,
-    ) { (d, days), now ->
-        val day = days[d.toEpochDay()]
+    fun page(date: LocalDate): Flow<TodayUi> = combine(
+        repo.observeRange(date.minusDays(1), date),
+        repo.observeTasks(date, date),
+        now,
+    ) { days, tasks, now ->
+        val day = days[date.toEpochDay()]
         TodayUi(
-            date = d,
+            date = date,
             today = now.toLocalDate(),
             nowMin = now.hour * 60 + now.minute,
             entries = day?.entries.orEmpty(),
-            carry = days[d.toEpochDay() - 1]?.entries.orEmpty().filter { it.endMin > 1440 },
+            carry = days[date.toEpochDay() - 1]?.entries.orEmpty().filter { it.endMin > 1440 },
             dayType = day?.type ?: DayType.NORMAL,
+            tasks = tasks,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TodayUi())
-
-    fun setDate(d: LocalDate) {
-        date.value = d
-    }
-
-    fun shiftDate(days: Long) {
-        date.value = date.value.plusDays(days)
     }
 
     fun setStatus(entry: DayEntry, status: Status) {
@@ -96,7 +102,19 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.applyUnforeseen(changed) }
     }
 
-    fun setDayType(type: DayType) {
-        viewModelScope.launch { repo.setDayType(date.value, type) }
+    fun setDayType(date: LocalDate, type: DayType) {
+        viewModelScope.launch { repo.setDayType(date, type) }
+    }
+
+    fun setTaskDone(task: Task, done: Boolean) {
+        viewModelScope.launch { repo.setTaskDone(task.id, done) }
+    }
+
+    fun saveTask(task: Task) {
+        viewModelScope.launch { repo.saveTask(task) }
+    }
+
+    fun deleteTask(task: Task) {
+        viewModelScope.launch { repo.deleteTask(task.id) }
     }
 }

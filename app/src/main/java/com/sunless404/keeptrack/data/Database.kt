@@ -9,6 +9,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
 import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -96,14 +98,91 @@ interface RoutineDao {
 
     @Query("DELETE FROM days")
     suspend fun deleteAllDays()
+
+    // Tareas
+    @Query("SELECT * FROM tasks WHERE epochDay BETWEEN :from AND :to ORDER BY epochDay, timeMin IS NULL, timeMin, id")
+    fun observeTasks(from: Long, to: Long): Flow<List<Task>>
+
+    @Query("SELECT * FROM tasks WHERE epochDay BETWEEN :from AND :to ORDER BY epochDay, timeMin IS NULL, timeMin, id")
+    suspend fun tasksBetween(from: Long, to: Long): List<Task>
+
+    @Query("SELECT * FROM tasks WHERE notify = 1 AND done = 0 AND remindAt IS NOT NULL")
+    suspend fun pendingReminders(): List<Task>
+
+    @Query("SELECT * FROM tasks")
+    suspend fun allTasks(): List<Task>
+
+    @Query("SELECT * FROM tasks WHERE id = :id")
+    suspend fun task(id: Long): Task?
+
+    @Upsert
+    suspend fun upsertTask(task: Task): Long
+
+    @Insert
+    suspend fun insertTasks(tasks: List<Task>)
+
+    @Query("DELETE FROM tasks WHERE id = :id")
+    suspend fun deleteTask(id: Long)
+
+    @Query("DELETE FROM tasks")
+    suspend fun deleteAllTasks()
+
+    // Gimnasio
+    @Query("SELECT * FROM gym_sessions ORDER BY epochDay DESC, id DESC")
+    fun observeGymSessions(): Flow<List<GymSession>>
+
+    @Query("SELECT * FROM gym_sets ORDER BY sessionId, position, id")
+    fun observeGymSets(): Flow<List<GymSet>>
+
+    @Query("SELECT * FROM gym_sessions")
+    suspend fun allGymSessions(): List<GymSession>
+
+    @Query("SELECT * FROM gym_sets")
+    suspend fun allGymSets(): List<GymSet>
+
+    @Upsert
+    suspend fun upsertGymSession(session: GymSession): Long
+
+    @Query("DELETE FROM gym_sessions WHERE id = :id")
+    suspend fun deleteGymSession(id: Long)
+
+    @Query("DELETE FROM gym_sets WHERE sessionId = :sessionId")
+    suspend fun deleteGymSetsOf(sessionId: Long)
+
+    @Insert
+    suspend fun insertGymSets(sets: List<GymSet>)
+
+    @Query("DELETE FROM gym_sessions")
+    suspend fun deleteAllGymSessions()
+
+    @Query("DELETE FROM gym_sets")
+    suspend fun deleteAllGymSets()
 }
 
-@Database(entities = [Block::class, DayEntry::class, DayInfo::class], version = 1, exportSchema = false)
+@Database(
+    entities = [Block::class, DayEntry::class, DayInfo::class, Task::class, GymSession::class, GymSet::class],
+    version = 2,
+    exportSchema = true,
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun dao(): RoutineDao
 
     companion object {
+        /** v1 → v2: tareas y gimnasio. Las sentencias salen del esquema exportado en app/schemas. */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `tasks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `epochDay` INTEGER NOT NULL, `timeMin` INTEGER, `title` TEXT NOT NULL, `description` TEXT NOT NULL, `notify` INTEGER NOT NULL, `remindAt` INTEGER, `done` INTEGER NOT NULL, `doneAt` INTEGER)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_tasks_epochDay` ON `tasks` (`epochDay`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `gym_sessions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `epochDay` INTEGER NOT NULL, `notes` TEXT NOT NULL, `bodyWeightKg` REAL)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_gym_sessions_epochDay` ON `gym_sessions` (`epochDay`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `gym_sets` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sessionId` INTEGER NOT NULL, `exercise` TEXT NOT NULL, `weightKg` REAL NOT NULL, `reps` INTEGER NOT NULL, `position` INTEGER NOT NULL)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_gym_sets_sessionId` ON `gym_sets` (`sessionId`)")
+            }
+        }
+
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "keeptrack.db").build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "keeptrack.db")
+                .addMigrations(MIGRATION_1_2)
+                .build()
     }
 }
