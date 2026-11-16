@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sunless404.rutina.ui.edit.EditScreen
+import com.sunless404.rutina.ui.importer.ImportScreen
 import com.sunless404.rutina.ui.settings.SettingsScreen
 import com.sunless404.rutina.ui.theme.RutinaTheme
 import com.sunless404.rutina.ui.today.TodayScreen
@@ -41,6 +42,7 @@ enum class Screen(val label: String, val icon: ImageVector?) {
     SEMANA("Semana", Icons.Default.DateRange),
     RUTINA("Rutina", Icons.AutoMirrored.Filled.List),
     AJUSTES("Ajustes", null),
+    IMPORTAR("Importar", null),
 }
 
 class MainActivity : ComponentActivity() {
@@ -56,7 +58,9 @@ fun RutinaApp() {
     var screen by rememberSaveable { mutableStateOf(Screen.HOY) }
     val todayVm: TodayViewModel = viewModel()
 
-    BackHandler(enabled = screen != Screen.HOY) { screen = Screen.HOY }
+    BackHandler(enabled = screen != Screen.HOY) {
+        screen = if (screen == Screen.IMPORTAR) Screen.RUTINA else Screen.HOY
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -64,7 +68,7 @@ fun RutinaApp() {
             NavigationBar {
                 Screen.entries.filter { it.icon != null }.forEach { s ->
                     NavigationBarItem(
-                        selected = screen == s,
+                        selected = screen == s || (s == Screen.RUTINA && screen == Screen.IMPORTAR),
                         onClick = { screen = s },
                         icon = { Icon(s.icon!!, null) },
                         label = { Text(s.label) },
@@ -82,7 +86,8 @@ fun RutinaApp() {
                     todayVm.setDate(date)
                     screen = Screen.HOY
                 }
-                Screen.RUTINA -> EditScreen(viewModel())
+                Screen.RUTINA -> EditScreen(viewModel(), onImport = { screen = Screen.IMPORTAR })
+                Screen.IMPORTAR -> ImportScreen(viewModel(), onBack = { screen = Screen.RUTINA })
                 Screen.AJUSTES -> SettingsScreen(onBack = { screen = Screen.HOY })
             }
         }

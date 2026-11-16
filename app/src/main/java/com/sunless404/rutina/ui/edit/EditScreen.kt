@@ -86,7 +86,7 @@ class EditViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun EditScreen(vm: EditViewModel) {
+fun EditScreen(vm: EditViewModel, onImport: () -> Unit = {}) {
     val blocks by vm.blocks.collectAsStateWithLifecycle()
     var day by rememberSaveable { mutableIntStateOf(LocalDate.now().dayOfWeek.value) }
     var editing by remember { mutableStateOf<Block?>(null) }
@@ -96,7 +96,10 @@ fun EditScreen(vm: EditViewModel) {
 
     ScreenScaffold(
         title = "Editar rutina",
-        actions = { TextButton(onClick = { copyDialog = true }) { Text("Copiar día") } },
+        actions = {
+            TextButton(onClick = onImport) { Text("Importar") }
+            TextButton(onClick = { copyDialog = true }) { Text("Copiar día") }
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = {
                 val start = dayBlocks.filter { !it.crossesMidnight }.maxOfOrNull { it.endMin } ?: (8 * 60)
