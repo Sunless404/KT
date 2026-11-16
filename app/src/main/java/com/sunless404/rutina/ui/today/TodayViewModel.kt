@@ -7,6 +7,7 @@ import com.sunless404.rutina.App
 import com.sunless404.rutina.data.DayEntry
 import com.sunless404.rutina.data.DayType
 import com.sunless404.rutina.data.Status
+import com.sunless404.rutina.notify.Alarms
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -83,6 +84,11 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setStatus(entry: DayEntry, status: Status) {
         if (entry.id == 0L) return
-        viewModelScope.launch { repo.setStatus(entry.id, status) }
+        viewModelScope.launch {
+            repo.setStatus(
+                entry.id, status,
+                snoozeUntil = if (status == Status.POSPUESTO) System.currentTimeMillis() + Alarms.SNOOZE_MS else null,
+            )
+        }
     }
 }

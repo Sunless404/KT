@@ -44,4 +44,19 @@ class Prefs(context: Context) {
     var endOfDayMin: Int
         get() = sp.getInt("endOfDayMin", 22 * 60)
         set(v) = sp.edit().putInt("endOfDayMin", v).apply()
+
+    /** Último instante (epoch millis) hasta el que ya se han lanzado los avisos. */
+    var lastHandled: Long
+        get() = sp.getLong("lastHandled", 0L)
+        set(v) = sp.edit().putLong("lastHandled", v).apply()
+
+    var hideBatteryHint: Boolean
+        get() = sp.getBoolean("hideBatteryHint", false)
+        set(v) = sp.edit().putBoolean("hideBatteryHint", v).apply()
+
+    fun inQuietHours(minOfDay: Int): Boolean {
+        if (!quietEnabled || quietStartMin == quietEndMin) return false
+        return if (quietStartMin < quietEndMin) minOfDay in quietStartMin until quietEndMin
+        else minOfDay >= quietStartMin || minOfDay < quietEndMin
+    }
 }

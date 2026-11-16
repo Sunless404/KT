@@ -14,7 +14,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -28,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sunless404.rutina.ui.edit.EditScreen
+import com.sunless404.rutina.ui.settings.SettingsScreen
 import com.sunless404.rutina.ui.theme.RutinaTheme
 import com.sunless404.rutina.ui.today.TodayScreen
 import com.sunless404.rutina.ui.today.TodayViewModel
@@ -37,6 +40,7 @@ enum class Screen(val label: String, val icon: ImageVector?) {
     HOY("Hoy", Icons.Default.Home),
     SEMANA("Semana", Icons.Default.DateRange),
     RUTINA("Rutina", Icons.AutoMirrored.Filled.List),
+    AJUSTES("Ajustes", null),
 }
 
 class MainActivity : ComponentActivity() {
@@ -71,12 +75,15 @@ fun RutinaApp() {
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
             when (screen) {
-                Screen.HOY -> TodayScreen(todayVm)
+                Screen.HOY -> TodayScreen(todayVm) {
+                    IconButton(onClick = { screen = Screen.AJUSTES }) { Icon(Icons.Default.Settings, "Ajustes") }
+                }
                 Screen.SEMANA -> WeekScreen(viewModel()) { date ->
                     todayVm.setDate(date)
                     screen = Screen.HOY
                 }
                 Screen.RUTINA -> EditScreen(viewModel())
+                Screen.AJUSTES -> SettingsScreen(onBack = { screen = Screen.HOY })
             }
         }
     }

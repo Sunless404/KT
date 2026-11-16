@@ -3,6 +3,7 @@ package com.sunless404.rutina.data
 import androidx.room.withTransaction
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
@@ -66,6 +67,8 @@ class Repository(private val db: AppDatabase) {
             }
         }
     }
+
+    suspend fun range(from: LocalDate, to: LocalDate): Map<Long, DayData> = observeRange(from, to).first()
 
     suspend fun entriesBetween(from: LocalDate, to: LocalDate): List<DayEntry> =
         dao.entriesBetween(from.toEpochDay(), to.toEpochDay())

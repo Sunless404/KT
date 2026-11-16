@@ -5,6 +5,7 @@ import com.sunless404.rutina.data.AppDatabase
 import com.sunless404.rutina.data.Prefs
 import com.sunless404.rutina.data.Repository
 import com.sunless404.rutina.data.SampleRoutine
+import com.sunless404.rutina.notify.Alarms
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -16,17 +17,21 @@ class App : Application() {
         private set
     lateinit var repo: Repository
         private set
+    lateinit var alarms: Alarms
+        private set
 
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)
         repo = Repository(AppDatabase.create(this))
+        alarms = Alarms(this)
+        repo.onChanged = { scope.launch { alarms.sync() } }
         scope.launch {
             if (!prefs.seeded) {
                 repo.replaceTemplate(SampleRoutine.blocks())
                 prefs.seeded = true
             }
-            repo.ensureMaterialized()
+            alarms.sync()
         }
     }
 }

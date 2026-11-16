@@ -55,6 +55,7 @@ import com.sunless404.rutina.domain.fmtLongDate
 import com.sunless404.rutina.domain.fmtRange
 import com.sunless404.rutina.ui.common.ScreenScaffold
 import com.sunless404.rutina.ui.common.composeColor
+import com.sunless404.rutina.ui.settings.PermissionsCard
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -79,6 +80,7 @@ fun TodayScreen(vm: TodayViewModel, extraActions: @Composable () -> Unit = {}) {
         ) {
             item { DateHeader(ui, onPrev = { vm.shiftDate(-1) }, onNext = { vm.shiftDate(1) }) }
             item { ProgressHeader(ui) }
+            item { PermissionsCard() }
             if (ui.isToday) item { NowCard(ui) }
             if (ui.isFuture) item {
                 Text(
@@ -245,7 +247,7 @@ private fun EntryRow(
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = { Text("Hecho") }, onClick = { menu = false; onStatus(Status.HECHO) })
             DropdownMenuItem(text = { Text("Saltar") }, onClick = { menu = false; onStatus(Status.SALTADO) })
-            DropdownMenuItem(text = { Text("Posponer") }, onClick = { menu = false; onStatus(Status.POSPUESTO) })
+            DropdownMenuItem(text = { Text("Posponer 10 min") }, onClick = { menu = false; onStatus(Status.POSPUESTO) })
             DropdownMenuItem(text = { Text("Dejar pendiente") }, onClick = { menu = false; onStatus(Status.PENDIENTE) })
         }
     }
