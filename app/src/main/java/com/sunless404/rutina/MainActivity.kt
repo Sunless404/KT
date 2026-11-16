@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -32,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sunless404.rutina.ui.edit.EditScreen
 import com.sunless404.rutina.ui.importer.ImportScreen
 import com.sunless404.rutina.ui.settings.SettingsScreen
+import com.sunless404.rutina.ui.stats.StatsScreen
 import com.sunless404.rutina.ui.theme.RutinaTheme
 import com.sunless404.rutina.ui.today.TodayScreen
 import com.sunless404.rutina.ui.today.TodayViewModel
@@ -40,6 +42,7 @@ import com.sunless404.rutina.ui.week.WeekScreen
 enum class Screen(val label: String, val icon: ImageVector?) {
     HOY("Hoy", Icons.Default.Home),
     SEMANA("Semana", Icons.Default.DateRange),
+    ESTADISTICAS("Estadísticas", Icons.Default.Star),
     RUTINA("Rutina", Icons.AutoMirrored.Filled.List),
     AJUSTES("Ajustes", null),
     IMPORTAR("Importar", null),
@@ -86,6 +89,7 @@ fun RutinaApp() {
                     todayVm.setDate(date)
                     screen = Screen.HOY
                 }
+                Screen.ESTADISTICAS -> StatsScreen(viewModel())
                 Screen.RUTINA -> EditScreen(viewModel(), onImport = { screen = Screen.IMPORTAR })
                 Screen.IMPORTAR -> ImportScreen(viewModel(), onBack = { screen = Screen.RUTINA })
                 Screen.AJUSTES -> SettingsScreen(onBack = { screen = Screen.HOY })

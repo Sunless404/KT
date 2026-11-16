@@ -91,4 +91,12 @@ class TodayViewModel(app: Application) : AndroidViewModel(app) {
             )
         }
     }
+
+    fun applyUnforeseen(changed: List<DayEntry>) {
+        viewModelScope.launch { repo.applyUnforeseen(changed) }
+    }
+
+    fun setDayType(type: DayType) {
+        viewModelScope.launch { repo.setDayType(date.value, type) }
+    }
 }

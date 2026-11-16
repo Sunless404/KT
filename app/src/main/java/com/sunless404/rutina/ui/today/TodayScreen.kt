@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -64,6 +65,7 @@ import java.time.ZoneOffset
 fun TodayScreen(vm: TodayViewModel, extraActions: @Composable () -> Unit = {}) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     var pickDate by remember { mutableStateOf(false) }
+    var unforeseen by remember { mutableStateOf(false) }
 
     ScreenScaffold(
         title = if (ui.isToday) "Hoy" else "Día",
@@ -78,10 +80,13 @@ fun TodayScreen(vm: TodayViewModel, extraActions: @Composable () -> Unit = {}) {
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item { DateHeader(ui, onPrev = { vm.shiftDate(-1) }, onNext = { vm.shiftDate(1) }) }
+            item { DateHeader(ui, onPrev = { vm.shiftDate(-1) }, onNext = { vm.shiftDate(1) }, onType = vm::setDayType) }
             item { ProgressHeader(ui) }
             item { PermissionsCard() }
             if (ui.isToday) item { NowCard(ui) }
+            if (ui.isToday) item {
+                OutlinedButton(onClick = { unforeseen = true }, modifier = Modifier.fillMaxWidth()) { Text("Imprevisto") }
+            }
             if (ui.isFuture) item {
                 Text(
                     "Día futuro: se muestra la plantilla. Aún no se puede marcar.",
@@ -107,6 +112,13 @@ fun TodayScreen(vm: TodayViewModel, extraActions: @Composable () -> Unit = {}) {
         }
     }
 
+    if (unforeseen) {
+        UnforeseenDialog(ui, onDismiss = { unforeseen = false }) { changed ->
+            vm.applyUnforeseen(changed)
+            unforeseen = false
+        }
+    }
+
     if (pickDate) {
         val state = rememberDatePickerState(
             initialSelectedDateMillis = ui.date.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
@@ -127,17 +139,25 @@ fun TodayScreen(vm: TodayViewModel, extraActions: @Composable () -> Unit = {}) {
 }
 
 @Composable
-private fun DateHeader(ui: TodayUi, onPrev: () -> Unit, onNext: () -> Unit) {
+private fun DateHeader(ui: TodayUi, onPrev: () -> Unit, onNext: () -> Unit, onType: (DayType) -> Unit) {
+    var menu by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         IconButton(onClick = onPrev) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Día anterior") }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(fmtLongDate(ui.date), style = MaterialTheme.typography.titleMedium)
-            if (ui.dayType != DayType.NORMAL) {
-                Text(
-                    "${ui.dayType.label} · no cuenta en rachas",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                )
+            Box {
+                TextButton(onClick = { menu = true }) {
+                    Text(
+                        if (ui.dayType == DayType.NORMAL) "Día normal · cambiar"
+                        else "${ui.dayType.label} · no cuenta en rachas ni avisa",
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DayType.entries.forEach { t ->
+                        DropdownMenuItem(text = { Text(t.label) }, onClick = { menu = false; onType(t) })
+                    }
+                }
             }
         }
         IconButton(onClick = onNext) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Día siguiente") }
@@ -231,6 +251,7 @@ private fun EntryRow(
                         add(e.category.label)
                         if (current) add("en curso")
                         if (e.status == Status.SALTADO || e.status == Status.POSPUESTO) add(e.status.label)
+                        if (e.modified) add("cambiado hoy")
                     }.joinToString(" · ")
                     Text(extra, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (e.notes.isNotBlank()) {

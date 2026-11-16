@@ -87,6 +87,19 @@ class Repository(private val db: AppDatabase) {
         onChanged()
     }
 
+    /** Cambios de un imprevisto: solo afectan a esas entradas y dejan de seguir a la plantilla. */
+    suspend fun applyUnforeseen(entries: List<DayEntry>) {
+        dao.updateEntries(entries.map { it.copy(modified = true) })
+        onChanged()
+    }
+
+    /** Marca un día como normal, festivo o libre. */
+    suspend fun setDayType(day: LocalDate, type: DayType) {
+        val info = dao.dayInfo(day.toEpochDay()) ?: DayInfo(day.toEpochDay())
+        dao.upsertDay(info.copy(type = type))
+        onChanged()
+    }
+
     // ---------- Plantilla ----------
 
     fun observeBlocks(): Flow<List<Block>> = dao.observeBlocks()
