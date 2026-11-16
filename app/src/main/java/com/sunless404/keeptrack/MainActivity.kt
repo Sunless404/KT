@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -29,9 +30,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sunless404.keeptrack.ui.edit.EditScreen
 import com.sunless404.keeptrack.ui.importer.ImportScreen
+import com.sunless404.keeptrack.ui.settings.AiSection
 import com.sunless404.keeptrack.ui.settings.BackupSection
 import com.sunless404.keeptrack.ui.settings.SettingsScreen
 import com.sunless404.keeptrack.ui.stats.StatsScreen
@@ -92,8 +95,12 @@ fun KeepTrackApp() {
                 }
                 Screen.ESTADISTICAS -> StatsScreen(viewModel())
                 Screen.RUTINA -> EditScreen(viewModel(), onImport = { screen = Screen.IMPORTAR })
-                Screen.IMPORTAR -> ImportScreen(viewModel(), onBack = { screen = Screen.RUTINA })
-                Screen.AJUSTES -> SettingsScreen(onBack = { screen = Screen.HOY }) { BackupSection() }
+                Screen.IMPORTAR -> ImportScreen(viewModel(), onBack = { screen = Screen.RUTINA }, onOpenSettings = { screen = Screen.AJUSTES })
+                Screen.AJUSTES -> SettingsScreen(onBack = { screen = Screen.HOY }) {
+                    AiSection()
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                    BackupSection()
+                }
             }
         }
     }

@@ -49,6 +49,6 @@
         android:contentDescription="Marcar como hecho"
         android:gravity="center"
         android:text="✓"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/kt_glyph"
         android:textSize="24sp" />
 </LinearLayout>

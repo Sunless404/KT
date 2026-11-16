@@ -2,8 +2,8 @@
 
 App Android (KeepTrack) para seguir una rutina semanal: ver el día, marcar bloques hechos,
 recibir avisos y revisar el progreso. Uso personal en un solo móvil: todo se
-guarda en local (Room), sin cuentas, sin servidor, sin analítica y sin permiso
-de Internet.
+guarda en local (Room), sin cuentas, sin servidor y sin analítica. La app solo
+usa Internet para el asistente de IA, y únicamente cuando lo usas.
 
 Kotlin, Jetpack Compose (Material 3, tema claro y oscuro), minSdk 26, targetSdk 35.
 
@@ -128,6 +128,27 @@ día en que empieza.
 
 También se acepta directamente la lista de bloques sin el objeto exterior, y el
 JSON dentro de un bloque de código Markdown.
+
+### Asistente IA (Google Gemini, gratis)
+
+En Rutina > Importar / IA puedes pedir en lenguaje natural una rutina nueva o
+cambios en la actual ("pasa el gimnasio al martes a las 19:00"). La respuesta
+pasa por la misma vista previa que el importador y no se guarda nada hasta que
+confirmas.
+
+Configuración, una sola vez, en Ajustes > Asistente IA:
+
+1. "Conseguir clave" abre Google AI Studio (aistudio.google.com/apikey). Inicia
+   sesión con una cuenta de Google y crea una clave de API. No pide tarjeta.
+2. Pégala y pulsa "Guardar y probar". La app lista los modelos de tu clave y
+   elige uno "flash", que son los del plan gratuito.
+
+Qué se envía: tu petición y, si está marcado "Partir de mi rutina actual", la
+plantilla semanal en el JSON de arriba. El historial, las estadísticas y los
+ajustes no se envían. En el plan gratuito Google puede usar ese contenido para
+mejorar sus productos. La clave se guarda cifrada con el Android Keystore y no
+va en la copia de seguridad. Si se alcanza el límite gratuito, la app lo dice y
+basta con esperar.
 
 ### Prompt para IA
 

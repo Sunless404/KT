@@ -26,6 +26,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -47,6 +49,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.sunless404.keeptrack.App
+import com.sunless404.keeptrack.ai.AiException
+import com.sunless404.keeptrack.ai.Gemini
 import com.sunless404.keeptrack.data.Block
 import com.sunless404.keeptrack.domain.AiPrompt
 import com.sunless404.keeptrack.domain.Analysis
@@ -54,6 +58,7 @@ import com.sunless404.keeptrack.domain.DAY_SHORT
 import com.sunless404.keeptrack.domain.ImportFormat
 import com.sunless404.keeptrack.domain.ParseResult
 import com.sunless404.keeptrack.domain.RoutineAnalysis
+import com.sunless404.keeptrack.domain.RoutineJson
 import com.sunless404.keeptrack.domain.RoutineParser
 import com.sunless404.keeptrack.domain.dayName
 import com.sunless404.keeptrack.domain.fmtDuration
@@ -81,10 +86,45 @@ data class ImportUi(
     val mode: ImportMode = ImportMode.SUSTITUIR,
     val days: Set<Int> = emptySet(),
     val done: String? = null,
+    val aiRequest: String = "",
+    val aiUseCurrent: Boolean = true,
+    val aiBusy: Boolean = false,
+    val aiError: String? = null,
 )
 
 class ImportViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo = (app as App).repo
+    private val app = app as App
+    private val repo = this.app.repo
+
+    val hasAiKey: Boolean get() = app.secrets.apiKey.isNotBlank()
+
+    fun setAiRequest(t: String) = _ui.update { it.copy(aiRequest = t, aiError = null) }
+    fun setAiUseCurrent(v: Boolean) = _ui.update { it.copy(aiUseCurrent = v) }
+
+    /** Pide a Gemini la rutina completa y la pasa por la misma vista previa que el importador. */
+    fun askAi() {
+        val s = _ui.value
+        if (s.aiBusy || s.aiRequest.isBlank()) return
+        _ui.update { it.copy(aiBusy = true, aiError = null, done = null) }
+        viewModelScope.launch {
+            try {
+                val current = if (s.aiUseCurrent) repo.allBlocks().takeIf { it.isNotEmpty() } else null
+                val answer = Gemini.generateJson(
+                    apiKey = app.secrets.apiKey,
+                    model = app.prefs.aiModel,
+                    system = AiPrompt.SYSTEM,
+                    prompt = AiPrompt.request(s.aiRequest, current?.let { RoutineJson.encode(it).toString() }),
+                )
+                setText(answer)
+                analyze()
+                _ui.update { it.copy(aiBusy = false, mode = ImportMode.SUSTITUIR) }
+            } catch (e: AiException) {
+                _ui.update { it.copy(aiBusy = false, aiError = e.message) }
+            } catch (e: Exception) {
+                _ui.update { it.copy(aiBusy = false, aiError = "Error inesperado: ${e.message}") }
+            }
+        }
+    }
     private val _ui = MutableStateFlow(ImportUi())
     val ui = _ui.asStateFlow()
 
@@ -123,7 +163,7 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
                     n = fresh.size
                 }
             }
-            _ui.value = ImportUi(done = "Importados $n bloques.")
+            _ui.value = ImportUi(done = "Importados $n bloques.", aiUseCurrent = s.aiUseCurrent)
         }
     }
 
@@ -131,13 +171,13 @@ class ImportViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun ImportScreen(vm: ImportViewModel, onBack: () -> Unit) {
+fun ImportScreen(vm: ImportViewModel, onBack: () -> Unit, onOpenSettings: () -> Unit = {}) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
     val clipboard = ctx.getSystemService(ClipboardManager::class.java)
 
     ScreenScaffold(
-        title = "Importar rutina",
+        title = "Importar o pedir a la IA",
         navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") } },
     ) { padding ->
         Column(
@@ -149,6 +189,9 @@ fun ImportScreen(vm: ImportViewModel, onBack: () -> Unit) {
                     Text(it, Modifier.fillMaxWidth().padding(12.dp))
                 }
             }
+            AiCard(ui, vm, onOpenSettings)
+            HorizontalDivider()
+            Text("O pega tu horario", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Pega tu horario como texto (un día por cabecera y una línea «HH:MM-HH:MM Título [categoría]» " +
                     "por bloque), una tabla Markdown o un JSON. El formato se detecta solo.",
@@ -176,6 +219,52 @@ fun ImportScreen(vm: ImportViewModel, onBack: () -> Unit) {
             val a = ui.analysis
             if (r != null && a != null) Preview(ui, r, a, vm)
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun AiCard(ui: ImportUi, vm: ImportViewModel, onOpenSettings: () -> Unit) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Asistente IA (Gemini)", style = MaterialTheme.typography.titleMedium)
+            if (!vm.hasAiKey) {
+                Text(
+                    "Para usarlo necesitas una clave gratuita de Google AI Studio. Se configura una sola vez en Ajustes.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Button(onClick = onOpenSettings) { Text("Configurar en Ajustes") }
+                return@Column
+            }
+            Text(
+                "Describe la rutina que quieres o qué cambiar. Verás el resultado en la vista previa antes de guardar nada.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+            OutlinedTextField(
+                value = ui.aiRequest,
+                onValueChange = vm::setAiRequest,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+                placeholder = {
+                    Text("Ej.: pasa el gimnasio al martes y jueves a las 19:00 y añade 1 h de lectura el domingo")
+                },
+                enabled = !ui.aiBusy,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = ui.aiUseCurrent, onCheckedChange = vm::setAiUseCurrent, enabled = !ui.aiBusy)
+                Text("Partir de mi rutina actual", style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(enabled = !ui.aiBusy && ui.aiRequest.isNotBlank(), onClick = vm::askAi) {
+                    Text(if (ui.aiBusy) "Pensando…" else "Generar")
+                }
+                if (ui.aiBusy) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 3.dp)
+            }
+            ui.aiError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            Text(
+                "Se envía a Google tu petición y, si está marcado, tu plantilla semanal. En el plan gratuito Google puede usar ese contenido para mejorar sus productos. El historial no se envía.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

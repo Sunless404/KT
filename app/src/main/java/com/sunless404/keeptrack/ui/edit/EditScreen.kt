@@ -97,7 +97,7 @@ fun EditScreen(vm: EditViewModel, onImport: () -> Unit = {}) {
     ScreenScaffold(
         title = "Editar rutina",
         actions = {
-            TextButton(onClick = onImport) { Text("Importar") }
+            TextButton(onClick = onImport) { Text("Importar / IA") }
             TextButton(onClick = { copyDialog = true }) { Text("Copiar día") }
         },
         floatingActionButton = {

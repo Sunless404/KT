@@ -1,6 +1,7 @@
 package com.sunless404.keeptrack
 
 import android.app.Application
+import com.sunless404.keeptrack.ai.SecretStore
 import com.sunless404.keeptrack.data.AppDatabase
 import com.sunless404.keeptrack.data.Prefs
 import com.sunless404.keeptrack.data.Repository
@@ -19,12 +20,15 @@ class App : Application() {
         private set
     lateinit var alarms: Alarms
         private set
+    lateinit var secrets: SecretStore
+        private set
 
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)
         repo = Repository(AppDatabase.create(this))
         alarms = Alarms(this)
+        secrets = SecretStore(prefs.sp)
         repo.onChanged = { scope.launch { alarms.sync() } }
         scope.launch {
             if (!prefs.seeded) {

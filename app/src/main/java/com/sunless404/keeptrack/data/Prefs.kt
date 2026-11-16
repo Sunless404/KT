@@ -54,6 +54,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("hideBatteryHint", false)
         set(v) = sp.edit().putBoolean("hideBatteryHint", v).apply()
 
+    /** Modelo de Gemini elegido para el asistente. */
+    var aiModel: String
+        get() = sp.getString("aiModel", null) ?: com.sunless404.keeptrack.ai.Gemini.DEFAULT_MODEL
+        set(v) = sp.edit().putString("aiModel", v).apply()
+
     fun inQuietHours(minOfDay: Int): Boolean {
         if (!quietEnabled || quietStartMin == quietEndMin) return false
         return if (quietStartMin < quietEndMin) minOfDay in quietStartMin until quietEndMin
