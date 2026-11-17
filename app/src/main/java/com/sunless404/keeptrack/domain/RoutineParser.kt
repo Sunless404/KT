@@ -583,12 +583,13 @@ object RoutineParser {
             val catRaw = o.any("categoria", "category")?.text()
             val cat = resolveCategory(catRaw, title)
             val notify = (o.any("aviso", "notify") as? JsonPrimitive)?.booleanOrNull ?: cat.notifiesByDefault
+            val fixed = (o.any("fijo", "fixed") as? JsonPrimitive)?.booleanOrNull ?: cat.fixedByDefault
             val lead = (o.any("antelacion", "antelacionMin", "lead") as? JsonPrimitive)?.intOrNull?.coerceIn(0, 180)
             val notes = o.any("notas", "notes")?.text().orEmpty()
             days.sorted().forEach { day ->
                 blocks += Block(
                     title = title, category = cat, dayOfWeek = day, startMin = start, endMin = end,
-                    notes = notes, notify = notify, leadMin = lead,
+                    notes = notes, notify = notify, leadMin = lead, fixed = fixed,
                 )
             }
         }

@@ -84,6 +84,11 @@ class EditViewModel(app: Application) : AndroidViewModel(app) {
     fun duplicate(id: Long) = viewModelScope.launch { repo.duplicateBlock(id) }
     fun copyDay(from: Int, to: Int) = viewModelScope.launch { repo.copyDay(from, to) }
 
+    /** Sustituye por completo los días indicados (tras un reajuste). */
+    fun applyDays(days: Map<Int, List<Block>>) = viewModelScope.launch {
+        if (days.isNotEmpty()) repo.replaceTemplate(days.flatMap { (d, list) -> list.map { it.copy(dayOfWeek = d) } }, days.keys)
+    }
+
     /** Rutina anterior a la última importación, para poder deshacerla. */
     data class ImportUndo(val count: Int, val before: List<Block>)
     val importUndo = kotlinx.coroutines.flow.MutableStateFlow<ImportUndo?>(null)
@@ -120,11 +125,12 @@ internal fun BlockEditorDialog(
     var notes by remember { mutableStateOf(initial.notes) }
     var notify by remember { mutableStateOf(if (initial.id == 0L) category.notifiesByDefault else initial.notify) }
     var lead by remember { mutableStateOf(initial.leadMin?.toString() ?: "") }
+    var fixed by remember { mutableStateOf(initial.fixed) }
     var picking by remember { mutableStateOf(0) } // 1 = inicio, 2 = fin
 
     val candidate = initial.copy(
         title = title.trim(), category = category, startMin = start, endMin = end,
-        notes = notes.trim(), notify = notify, leadMin = lead.toIntOrNull()?.coerceIn(0, 180),
+        notes = notes.trim(), notify = notify, leadMin = lead.toIntOrNull()?.coerceIn(0, 180), fixed = fixed,
     )
     val conflicts = days.flatMap { d -> conflictsOf(candidate.copy(dayOfWeek = d), all) }.distinctBy { it.id }
     val valid = title.isNotBlank() && days.isNotEmpty() && start != end
@@ -156,7 +162,10 @@ internal fun BlockEditorDialog(
                             selected = category == c,
                             onClick = {
                                 category = c
-                                if (initial.id == 0L) notify = c.notifiesByDefault
+                                if (initial.id == 0L) {
+                                    notify = c.notifiesByDefault
+                                    fixed = c.fixedByDefault
+                                }
                             },
                             label = { Text(c.label) },
                         )
@@ -172,6 +181,17 @@ internal fun BlockEditorDialog(
                             label = { Text(s) },
                         )
                     }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Fijo")
+                        Text(
+                            if (category == Category.SUENO) "El sueño nunca baja de 8 h; solo se mueve la hora de acostarse"
+                            else if (fixed) "No se mueve ni cambia de duración al reajustar" else "Puede moverse o cambiar de duración al reajustar",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(checked = fixed, onCheckedChange = { fixed = it }, enabled = category != Category.SUENO)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Aviso", modifier = Modifier.weight(1f))

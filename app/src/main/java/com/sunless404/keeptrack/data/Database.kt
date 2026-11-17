@@ -189,7 +189,7 @@ interface RoutineDao {
 
 @Database(
     entities = [Block::class, DayEntry::class, DayInfo::class, Task::class, GymSession::class, GymSet::class, Reward::class],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -226,9 +226,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v4 → v5: bloques fijos o flexibles (por defecto según su categoría). */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `blocks` ADD COLUMN `fixed` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE `blocks` SET `fixed` = 1 WHERE `category` IN ('CLASE', 'ACADEMIA', 'DESPLAZAMIENTO', 'COMIDA')")
+            }
+        }
+
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "keeptrack.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
     }
 }

@@ -49,4 +49,17 @@ class MigrationTest {
             assertEquals(0, c.getInt(3))
         }
     }
+
+    @Test
+    fun v4toV5MarksFixedBlocks() {
+        helper.createDatabase("prueba5.db", 4).use { db ->
+            db.execSQL("INSERT INTO blocks (title, category, dayOfWeek, startMin, endMin, notes, notify, leadMin) VALUES ('Clases', 'CLASE', 1, 480, 840, '', 1, NULL)")
+            db.execSQL("INSERT INTO blocks (title, category, dayOfWeek, startMin, endMin, notes, notify, leadMin) VALUES ('Estudio', 'ESTUDIO', 1, 960, 1080, '', 1, NULL)")
+        }
+        val db = helper.runMigrationsAndValidate("prueba5.db", 5, true, AppDatabase.MIGRATION_4_5)
+        db.query("SELECT title, fixed FROM blocks ORDER BY startMin").use { c ->
+            c.moveToFirst(); assertEquals(1, c.getInt(1))
+            c.moveToNext(); assertEquals(0, c.getInt(1))
+        }
+    }
 }

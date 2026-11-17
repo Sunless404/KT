@@ -66,7 +66,8 @@ import com.sunless404.keeptrack.data.Task
 import com.sunless404.keeptrack.domain.fmtLongDate
 import com.sunless404.keeptrack.domain.fmtTime
 import com.sunless404.keeptrack.ui.common.KtIcons
-import com.sunless404.keeptrack.ui.common.TimePickerDialog
+import com.sunless404.keeptrack.ui.common.WheelTimePicker
+import androidx.compose.foundation.border
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -85,11 +86,10 @@ val HighPriority = Color(0xFFE5484D)
  */
 private data class Remind(val label: String, val offsetMin: Int, val relative: Boolean, val dayBefore: Boolean = false)
 
-private val withTime = listOf(
-    Remind("A la hora", 0, true), Remind("10 min antes", 10, true), Remind("30 min antes", 30, true),
-    Remind("1 h antes", 60, true), Remind("1 día antes", 1440, true),
-)
-private val allDay = listOf(Remind("Ese día a las 09:00", 9 * 60, false), Remind("El día antes a las 20:00", 20 * 60, false, dayBefore = true))
+private val withTime = listOf(Remind("1 h antes", 60, true), Remind("30 min antes", 30, true), Remind("5 min antes", 5, true))
+
+/** Sin hora no hay referencia para "antes": solo "Sin aviso" u "Otra hora". */
+private val allDay = emptyList<Remind>()
 
 private fun Remind.at(date: LocalDate, start: Int?): Long =
     if (relative && start != null) remindAtMillis(date, start) - offsetMin * 60_000L
@@ -112,7 +112,8 @@ fun TaskEditorDialog(initial: Task, onDismiss: () -> Unit, onDelete: (() -> Unit
     var repeat by remember { mutableStateOf(initial.repeat) }
     var high by remember { mutableStateOf(initial.highPriority) }
     var remindAt by remember { mutableStateOf(if (initial.notify) initial.remindAt else null) }
-    var picking by remember { mutableStateOf("") } // date, start, end, remind
+    var picking by remember { mutableStateOf("") } // date
+    var wheel by remember { mutableStateOf("") } // start, end, remind: rueda abierta en el formulario
     var confirmDelete by remember { mutableStateOf(false) }
 
     val options = if (start != null) withTime else allDay
@@ -121,9 +122,9 @@ fun TaskEditorDialog(initial: Task, onDismiss: () -> Unit, onDelete: (() -> Unit
     var lastChoice by remember { mutableStateOf(chosen) }
     LaunchedEffect(date, start != null, start) {
         lastChoice?.let { c ->
-            val o = if (c in options) c else options.first()
+            val o = if (c in options) c else options.firstOrNull()
             lastChoice = o
-            remindAt = o.at(date, start)
+            remindAt = o?.at(date, start)
         }
     }
 
@@ -192,11 +193,32 @@ fun TaskEditorDialog(initial: Task, onDismiss: () -> Unit, onDelete: (() -> Unit
                     // Hora
                     Section(KtIcons.Clock) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            TimeChip("Inicio", start, onClick = { picking = "start" }, onClear = { start = null; end = null })
+                            TimeChip("Inicio", start, active = wheel == "start", onClick = {
+                                if (start == null) start = ((java.time.LocalTime.now().hour + 1) % 24) * 60
+                                wheel = if (wheel == "start") "" else "start"
+                            }, onClear = { start = null; end = null; wheel = "" })
                             if (start != null) {
                                 Text("–", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                TimeChip("Fin", end, onClick = { picking = "end" }, onClear = { end = null })
+                                TimeChip("Fin", end, active = wheel == "end", onClick = {
+                                    if (end == null) end = (start!! + 60) % 1440
+                                    wheel = if (wheel == "end") "" else "end"
+                                }, onClear = { end = null; if (wheel == "end") wheel = "" })
                             }
+                        }
+                        androidx.compose.animation.AnimatedVisibility(wheel == "start" || wheel == "end") {
+                            WheelPanel(
+                                minute = (if (wheel == "end") end else start) ?: 600,
+                                onChange = { m ->
+                                    if (wheel == "end") end = m
+                                    else {
+                                        // Mantiene la duración si ya había fin.
+                                        val old = start
+                                        start = m
+                                        end?.let { e -> if (old != null) end = ((e - old + 1440) % 1440 + m) % 1440 }
+                                    }
+                                },
+                                onDone = { wheel = "" },
+                            )
                         }
                         Text(
                             when {
@@ -218,7 +240,22 @@ fun TaskEditorDialog(initial: Task, onDismiss: () -> Unit, onDelete: (() -> Unit
                             Pill(
                                 if (remindAt != null && chosen == null) "Otra: " + describe(remindAt!!, date) else "Otra hora",
                                 remindAt != null && chosen == null,
-                            ) { picking = "remind" }
+                            ) {
+                                if (remindAt == null || chosen != null) {
+                                    remindAt = remindAtMillis(date, start?.let { (it - 15 + 1440) % 1440 } ?: (9 * 60))
+                                    lastChoice = null
+                                }
+                                wheel = if (wheel == "remind") "" else "remind"
+                            }
+                        }
+                        androidx.compose.animation.AnimatedVisibility(wheel == "remind" && remindAt != null && chosen == null) {
+                            val z = remindAt?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()) }
+                            WheelPanel(
+                                minute = z?.let { it.hour * 60 + it.minute } ?: 540,
+                                caption = "Aviso el ${fmtLongDate(date).lowercase()}",
+                                onChange = { m -> remindAt = remindAtMillis(date, m); lastChoice = null },
+                                onDone = { wheel = "" },
+                            )
                         }
                     }
 
@@ -288,25 +325,6 @@ fun TaskEditorDialog(initial: Task, onDismiss: () -> Unit, onDelete: (() -> Unit
                 dismissButton = { TextButton(onClick = { picking = "" }) { Text("Cancelar") } },
             ) { DatePicker(state = state) }
         }
-        "start" -> TimePickerDialog(start ?: (10 * 60), "Hora de inicio", onDismiss = { picking = "" }) {
-            val oldStart = start
-            start = it
-            // Mantiene la duración si ya había fin.
-            end?.let { e -> if (oldStart != null) end = ((e - oldStart + 1440) % 1440 + it) % 1440 }
-            picking = ""
-        }
-        "end" -> TimePickerDialog(end ?: ((start ?: 600) + 60) % 1440, "Hora de fin", onDismiss = { picking = "" }) {
-            end = it
-            picking = ""
-        }
-        "remind" -> {
-            val initialMin = remindAt?.let { val z = Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()); z.hour * 60 + z.minute } ?: (9 * 60)
-            TimePickerDialog(initialMin, "Avisar el ${fmtLongDate(date).lowercase()} a las…", onDismiss = { picking = "" }) {
-                remindAt = remindAtMillis(date, it)
-                lastChoice = null
-                picking = ""
-            }
-        }
     }
 
     if (confirmDelete) {
@@ -346,10 +364,11 @@ private fun Pill(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun RowScope.TimeChip(label: String, value: Int?, onClick: () -> Unit, onClear: () -> Unit) {
+private fun RowScope.TimeChip(label: String, value: Int?, active: Boolean, onClick: () -> Unit, onClear: () -> Unit) {
     Row(
         Modifier.clip(CircleShape)
             .background(if (value != null) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh)
+            .then(if (active) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier)
             .clickable(onClick = onClick)
             .padding(start = 14.dp, end = if (value != null) 4.dp else 14.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -366,5 +385,19 @@ private fun RowScope.TimeChip(label: String, value: Int?, onClick: () -> Unit, o
                 Icon(Icons.Default.Close, "Quitar", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer)
             }
         }
+    }
+}
+
+/** Ruedas de hora dentro del formulario, con botón para cerrarlas. */
+@Composable
+private fun WheelPanel(minute: Int, onChange: (Int) -> Unit, onDone: () -> Unit, caption: String? = null) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 4.dp).clip(MaterialTheme.shapes.large)
+            .background(MaterialTheme.colorScheme.surfaceContainer).padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        caption?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        WheelTimePicker(minute, onChange)
+        TextButton(onClick = onDone) { Text("Listo") }
     }
 }

@@ -6,13 +6,13 @@ import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 /** Categorías de bloque. [color] en ARGB. */
-enum class Category(val label: String, val color: Long, val notifiesByDefault: Boolean = true) {
-    CLASE("Clase", 0xFF3F51B5),
-    ACADEMIA("Academia", 0xFFAB47BC),
+enum class Category(val label: String, val color: Long, val notifiesByDefault: Boolean = true, val fixedByDefault: Boolean = false) {
+    CLASE("Clase", 0xFF3F51B5, fixedByDefault = true),
+    ACADEMIA("Academia", 0xFFAB47BC, fixedByDefault = true),
     ESTUDIO("Estudio", 0xFF1E88E5),
     GIMNASIO("Gimnasio", 0xFFE53935),
-    DESPLAZAMIENTO("Desplazamiento", 0xFF78909C),
-    COMIDA("Comida", 0xFFFB8C00),
+    DESPLAZAMIENTO("Desplazamiento", 0xFF78909C, fixedByDefault = true),
+    COMIDA("Comida", 0xFFFB8C00, fixedByDefault = true),
     SUENO("Sueño", 0xFF4527A0, notifiesByDefault = false),
     LECTURA("Lectura", 0xFF00897B),
     HIGIENE("Higiene", 0xFF26C6DA),
@@ -54,6 +54,8 @@ data class Block(
     val notify: Boolean = category.notifiesByDefault,
     /** Minutos de antelación del aviso; null = valor por defecto de Ajustes. */
     val leadMin: Int? = null,
+    /** Fijo: no se mueve ni cambia de duración al reajustar la rutina (clases, academia…). */
+    @androidx.room.ColumnInfo(defaultValue = "0") val fixed: Boolean = category.fixedByDefault,
 ) {
     val durationMin: Int
         get() = ((endMin - startMin + DAY_MIN) % DAY_MIN).let { if (it == 0) DAY_MIN else it }

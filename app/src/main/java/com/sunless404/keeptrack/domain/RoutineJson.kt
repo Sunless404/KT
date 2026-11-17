@@ -22,7 +22,7 @@ object RoutineJson {
      */
     fun encode(blocks: List<Block>): JsonObject {
         val groups = blocks.sortedWith(compareBy({ it.startMin }, { it.dayOfWeek }))
-            .groupBy { listOf(it.title, it.category, it.startMin, it.endMin, it.notes, it.notify, it.leadMin) }
+            .groupBy { listOf(it.title, it.category, it.startMin, it.endMin, it.notes, it.notify, it.leadMin, it.fixed) }
         val list: JsonArray = buildJsonArray {
             groups.values.forEach { same ->
                 val b = same.first()
@@ -34,6 +34,7 @@ object RoutineJson {
                     put("fin", fmtTime(b.endMin))
                     if (b.notes.isNotBlank()) put("notas", b.notes)
                     put("aviso", b.notify)
+                    if (b.fixed != b.category.fixedByDefault) put("fijo", b.fixed)
                     b.leadMin?.let { put("antelacion", it) }
                 })
             }

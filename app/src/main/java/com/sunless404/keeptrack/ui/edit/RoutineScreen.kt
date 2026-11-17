@@ -82,6 +82,7 @@ fun RoutineScreen(vm: EditViewModel, onOpenProfile: () -> Unit) {
     var editing by remember { mutableStateOf<Block?>(null) }
     var copyFrom by remember { mutableStateOf<Int?>(null) }
     var toDelete by remember { mutableStateOf<Block?>(null) }
+    var placing by remember { mutableStateOf<Triple<Block, Set<Int>, List<Pair<Int, com.sunless404.keeptrack.domain.ReflowResult>>>?>(null) }
     var importMenu by remember { mutableStateOf(false) }
     val shared by SharedImport.text.collectAsStateWithLifecycle()
     val undo by vm.importUndo.collectAsStateWithLifecycle()
@@ -143,6 +144,7 @@ fun RoutineScreen(vm: EditViewModel, onOpenProfile: () -> Unit) {
                 },
                 onEdit = { editing = it },
                 onDuplicate = { vm.duplicate(it.id) },
+                onToggleFixed = { vm.save(it.copy(fixed = !it.fixed), setOf(it.dayOfWeek)) },
                 onDelete = { toDelete = it },
                 onCopy = { copyFrom = day },
             )
@@ -160,18 +162,30 @@ fun RoutineScreen(vm: EditViewModel, onOpenProfile: () -> Unit) {
 
     editing?.let { b ->
         BlockEditorDialog(b, blocks, onDismiss = { editing = null }) { block, days ->
-            vm.save(block, days)
+            val results = placeResults(block, days, blocks)
+            if (results == null) vm.save(block, days) else placing = Triple(block, days, results)
             editing = null
         }
     }
-    toDelete?.let { b ->
-        AlertDialog(
-            onDismissRequest = { toDelete = null },
-            title = { Text("Borrar bloque") },
-            text = { Text("¿Borrar «${b.title}» del ${dayName(b.dayOfWeek).lowercase()}? El historial de días pasados no cambia.") },
-            confirmButton = { TextButton(onClick = { vm.delete(b.id); toDelete = null }) { Text("Borrar") } },
-            dismissButton = { TextButton(onClick = { toDelete = null }) { Text("Cancelar") } },
+    placing?.let { (block, days, results) ->
+        PlaceReflowDialog(
+            results,
+            onDismiss = { placing = null },
+            onApply = {
+                // Días con ajuste: se guarda el día entero; el resto, el bloque tal cual.
+                vm.applyDays(results.associate { (d, r) -> d to r.blocks })
+                val plain = days - results.map { it.first }.toSet()
+                if (plain.isNotEmpty()) vm.save(block, plain)
+                placing = null
+            },
+            onPlain = { vm.save(block, days); placing = null },
         )
+    }
+    toDelete?.let { b ->
+        DeleteReflowDialog(b, blocks, onDismiss = { toDelete = null }) { dayBlocks ->
+            vm.applyDays(mapOf(b.dayOfWeek to dayBlocks))
+            toDelete = null
+        }
     }
     copyFrom?.let { from ->
         CopyDayDialog(from = from, onDismiss = { copyFrom = null }) { targets ->
@@ -194,6 +208,7 @@ private fun DayCard(
     onEdit: (Block) -> Unit,
     onDuplicate: (Block) -> Unit,
     onDelete: (Block) -> Unit,
+    onToggleFixed: (Block) -> Unit,
     onCopy: () -> Unit,
 ) {
     val arrow by animateFloatAsState(if (open) 180f else 0f, label = "flecha")
@@ -237,7 +252,7 @@ private fun DayCard(
             Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 blocks.forEachIndexed { i, b ->
                     Box(Modifier.appear(i, 24f)) {
-                        BlockRow(b, conflicts = conflictsOf(b, all), onEdit = { onEdit(b) }, onDuplicate = { onDuplicate(b) }, onDelete = { onDelete(b) })
+                        BlockRow(b, conflicts = conflictsOf(b, all), onEdit = { onEdit(b) }, onDuplicate = { onDuplicate(b) }, onDelete = { onDelete(b) }, onToggleFixed = { onToggleFixed(b) })
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
@@ -253,7 +268,7 @@ private fun DayCard(
 }
 
 @Composable
-private fun BlockRow(b: Block, conflicts: List<Block>, onEdit: () -> Unit, onDuplicate: () -> Unit, onDelete: () -> Unit) {
+private fun BlockRow(b: Block, conflicts: List<Block>, onEdit: () -> Unit, onDuplicate: () -> Unit, onDelete: () -> Unit, onToggleFixed: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(MaterialTheme.shapes.medium)
@@ -282,6 +297,10 @@ private fun BlockRow(b: Block, conflicts: List<Block>, onEdit: () -> Unit, onDup
                     Spacer(Modifier.width(6.dp))
                     Icon(KtIcons.Bell, "Con aviso", Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                if (b.fixed) {
+                    Spacer(Modifier.width(6.dp))
+                    Icon(KtIcons.Lock, "Fijo", Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             if (conflicts.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -300,6 +319,10 @@ private fun BlockRow(b: Block, conflicts: List<Block>, onEdit: () -> Unit, onDup
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 DropdownMenuItem(text = { Text("Modificar") }, onClick = { menu = false; onEdit() })
                 DropdownMenuItem(text = { Text("Duplicar") }, onClick = { menu = false; onDuplicate() })
+                DropdownMenuItem(
+                    text = { Text(if (b.fixed) "Marcar como flexible" else "Marcar como fijo") },
+                    onClick = { menu = false; onToggleFixed() },
+                )
                 DropdownMenuItem(text = { Text("Borrar") }, onClick = { menu = false; onDelete() })
             }
         }
