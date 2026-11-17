@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -132,10 +133,18 @@ fun TopActions(helpTitle: String, help: List<String>, onProfile: () -> Unit, ext
     Row(verticalAlignment = Alignment.CenterVertically) {
         extra()
         HelpButton(helpTitle, help)
-        Avatar(
-            profile.photo, profile.displayName, 34.dp,
-            Modifier.padding(start = 4.dp, end = 8.dp).semantics { contentDescription = "Perfil" },
-            onClick = onProfile,
-        )
+        val wallet by remember { app.repo.wallet.observe() }.collectAsState(initial = null)
+        Box(Modifier.padding(start = 4.dp, end = 8.dp)) {
+            Avatar(profile.photo, profile.displayName, 34.dp, Modifier.semantics { contentDescription = "Perfil" }, onClick = onProfile)
+            wallet?.let { w ->
+                Box(
+                    Modifier.align(Alignment.BottomEnd).offset(x = 4.dp, y = 4.dp).clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondary).padding(horizontal = 4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("${w.level.level}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondary)
+                }
+            }
+        }
     }
 }

@@ -157,11 +157,39 @@ interface RoutineDao {
 
     @Query("DELETE FROM gym_sets")
     suspend fun deleteAllGymSets()
+
+    // Experiencia y monedas
+    @Query("SELECT * FROM rewards ORDER BY createdAt DESC")
+    fun observeRewards(): Flow<List<Reward>>
+
+    @Query("SELECT * FROM rewards")
+    suspend fun allRewards(): List<Reward>
+
+    @Query("SELECT * FROM rewards WHERE `key` = :key")
+    suspend fun reward(key: String): Reward?
+
+    @Query("SELECT COALESCE(SUM(coins), 0) FROM rewards WHERE capped = 1 AND coins > 0 AND epochDay BETWEEN :from AND :to")
+    suspend fun cappedCoinsBetween(from: Long, to: Long): Int
+
+    @Query("SELECT COALESCE(SUM(xp), 0) FROM rewards")
+    suspend fun totalXp(): Int
+
+    @Insert
+    suspend fun insertReward(reward: Reward): Long
+
+    @Insert
+    suspend fun insertRewards(rewards: List<Reward>)
+
+    @Query("DELETE FROM rewards WHERE `key` = :key")
+    suspend fun deleteReward(key: String)
+
+    @Query("DELETE FROM rewards")
+    suspend fun deleteAllRewards()
 }
 
 @Database(
-    entities = [Block::class, DayEntry::class, DayInfo::class, Task::class, GymSession::class, GymSet::class],
-    version = 2,
+    entities = [Block::class, DayEntry::class, DayInfo::class, Task::class, GymSession::class, GymSet::class, Reward::class],
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -180,9 +208,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v2 → v3: experiencia y monedas. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `rewards` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `key` TEXT NOT NULL, `kind` TEXT NOT NULL, `xp` INTEGER NOT NULL, `coins` INTEGER NOT NULL, `capped` INTEGER NOT NULL, `epochDay` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `label` TEXT NOT NULL)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_rewards_key` ON `rewards` (`key`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_rewards_epochDay` ON `rewards` (`epochDay`)")
+            }
+        }
+
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "keeptrack.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
     }
 }

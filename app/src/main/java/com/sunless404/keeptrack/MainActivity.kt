@@ -46,6 +46,7 @@ import com.sunless404.keeptrack.ui.account.AuthScreen
 import com.sunless404.keeptrack.ui.account.ProfileScreen
 import com.sunless404.keeptrack.ui.assistant.AssistantScreen
 import com.sunless404.keeptrack.ui.common.KtIcons
+import com.sunless404.keeptrack.ui.common.RewardOverlay
 import com.sunless404.keeptrack.ui.edit.RoutineScreen
 import com.sunless404.keeptrack.ui.gym.GymScreen
 import com.sunless404.keeptrack.ui.settings.AiSection
@@ -91,6 +92,7 @@ fun Root() {
             KeepTrackApp(onWantsAccount = { app.prefs.guest = false; guest = false })
         }
     }
+    RewardOverlay()
     UpdateDialog()
 }
 

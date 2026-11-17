@@ -1,6 +1,11 @@
 package com.sunless404.keeptrack.data
 
 import androidx.room.withTransaction
+import com.sunless404.keeptrack.domain.Achievements
+import com.sunless404.keeptrack.domain.RewardKind
+import com.sunless404.keeptrack.domain.StreakLevel
+import com.sunless404.keeptrack.domain.Totals
+import com.sunless404.keeptrack.domain.streakLevelCoins
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -17,6 +22,7 @@ data class DayData(
 
 class Repository(private val db: AppDatabase) {
     private val dao = db.dao()
+    val wallet = Wallet(dao)
     private val mutex = Mutex()
 
     /** Se invoca cuando cambia algo que afecta a avisos o widget. */
@@ -84,7 +90,46 @@ class Repository(private val db: AppDatabase) {
                 snoozeUntil = if (status == Status.POSPUESTO) snoozeUntil else null,
             )
         )
+        if (status == Status.HECHO) wallet.grant("block:${e.id}", RewardKind.BLOCK, e.epochDay, label = e.title)
+        else wallet.revoke("block:${e.id}")
+        checkDayComplete(e.epochDay)
         onChanged()
+    }
+
+    /** Día completo: todos los bloques y tareas de ese día hechos. */
+    private suspend fun checkDayComplete(epochDay: Long) {
+        val entries = dao.entriesBetween(epochDay, epochDay)
+        val tasks = dao.tasksBetween(epochDay, epochDay)
+        val type = dao.dayInfo(epochDay)?.type ?: DayType.NORMAL
+        val complete = type == DayType.NORMAL && entries.size + tasks.size > 0 &&
+            entries.all { it.status == Status.HECHO } && tasks.all { it.done }
+        if (complete) wallet.grant("day:$epochDay", RewardKind.DAY_COMPLETE, epochDay, label = "¡Día completo!", celebrate = true)
+        else wallet.revoke("day:$epochDay")
+    }
+
+    /**
+     * Rachas que suben de nivel y logros desbloqueados. Cada uno se cobra una vez:
+     * las rachas, una por nivel y por racha (si se rompe y se vuelve a empezar, cuenta de nuevo).
+     */
+    suspend fun evaluateMilestones() {
+        val today = LocalDate.now()
+        val days = range(today.minusDays(400), today)
+        val (totals, streaks) = Totals.compute(
+            days.values, dao.tasksBetween(today.minusDays(400).toEpochDay(), today.plusDays(400).toEpochDay()),
+            dao.allGymSessions(), dao.allGymSets(), today.toEpochDay(),
+        )
+        streaks.forEach { st ->
+            val start = st.currentStart ?: return@forEach
+            StreakLevel.entries.filter { it != StreakLevel.NONE && it.minDays <= st.current }.forEach { lvl ->
+                wallet.grant(
+                    "streak:${st.habit}:${lvl.name}:$start", RewardKind.STREAK_LEVEL,
+                    coins = streakLevelCoins(lvl), label = "${st.habit.label}: ${lvl.label}", celebrate = true,
+                )
+            }
+        }
+        Achievements.of(totals).filter { it.unlocked }.forEach { a ->
+            wallet.grant("ach:${a.title}", RewardKind.ACHIEVEMENT, label = "Logro: ${a.title}", celebrate = true)
+        }
     }
 
     /** Cambios de un imprevisto: solo afectan a esas entradas y dejan de seguir a la plantilla. */
@@ -120,11 +165,16 @@ class Repository(private val db: AppDatabase) {
     suspend fun setTaskDone(id: Long, done: Boolean) {
         val t = dao.task(id) ?: return
         dao.upsertTask(t.copy(done = done, doneAt = if (done) System.currentTimeMillis() else null))
+        if (done) wallet.grant("task:$id", RewardKind.TASK, t.epochDay, label = t.title) else wallet.revoke("task:$id")
+        checkDayComplete(t.epochDay)
         onChanged()
     }
 
     suspend fun deleteTask(id: Long) {
+        val t = dao.task(id)
         dao.deleteTask(id)
+        wallet.revoke("task:$id")
+        t?.let { checkDayComplete(it.epochDay) }
         onChanged()
     }
 
@@ -141,6 +191,7 @@ class Repository(private val db: AppDatabase) {
             dao.insertGymSets(sets.mapIndexed { i, s -> s.copy(id = 0, sessionId = newId, position = i) })
             newId
         }
+        if (session.id == 0L) wallet.grant("gym:$id", RewardKind.GYM_SESSION, session.epochDay, label = "Sesión de gimnasio")
         onChanged()
         return id
     }
@@ -150,6 +201,7 @@ class Repository(private val db: AppDatabase) {
             dao.deleteGymSetsOf(id)
             dao.deleteGymSession(id)
         }
+        wallet.revoke("gym:$id")
         onChanged()
     }
 
@@ -230,6 +282,7 @@ class Repository(private val db: AppDatabase) {
             tasks = dao.allTasks(),
             gymSessions = dao.allGymSessions(),
             gymSets = dao.allGymSets(),
+            rewards = dao.allRewards(),
             settings = settings,
         )
     }
@@ -244,10 +297,12 @@ class Repository(private val db: AppDatabase) {
                 dao.deleteAllTasks()
                 dao.deleteAllGymSets()
                 dao.deleteAllGymSessions()
+                dao.deleteAllRewards()
                 dao.insertBlocks(backup.blocks)
                 dao.insertTasks(backup.tasks)
                 backup.gymSessions.forEach { dao.upsertGymSession(it) }
                 dao.insertGymSets(backup.gymSets)
+                dao.insertRewards(backup.rewards)
                 dao.insertEntries(backup.entries)
                 dao.upsertDays(backup.days)
             }

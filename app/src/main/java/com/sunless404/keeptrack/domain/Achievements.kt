@@ -11,6 +11,27 @@ data class ProfileTotals(
     val currentByHabit: Map<Habit, Int> = emptyMap(),
 )
 
+object Totals {
+    fun compute(
+        days: Collection<com.sunless404.keeptrack.data.DayData>,
+        tasks: List<com.sunless404.keeptrack.data.Task>,
+        sessions: List<com.sunless404.keeptrack.data.GymSession>,
+        sets: List<com.sunless404.keeptrack.data.GymSet>,
+        todayEpoch: Long,
+    ): Pair<ProfileTotals, List<Streak>> {
+        val streaks = Stats.streaks(days, todayEpoch)
+        return ProfileTotals(
+            blocksDone = days.sumOf { d -> d.entries.count { it.status == com.sunless404.keeptrack.data.Status.HECHO } },
+            tasksDone = tasks.count { it.done },
+            gymSessions = sessions.size,
+            gymExercises = sets.map { GymScore.normalize(it.exercise) }.distinct().size,
+            bestStreak = streaks.maxOfOrNull { it.best } ?: 0,
+            bestByHabit = streaks.associate { it.habit to it.best },
+            currentByHabit = streaks.associate { it.habit to it.current },
+        ) to streaks
+    }
+}
+
 enum class AchievementIcon { STEP, BLOCKS, FIRE, BOOK, BED, DUMBBELL, TASKS, TROPHY }
 
 data class Achievement(

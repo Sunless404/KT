@@ -2,6 +2,7 @@ package com.sunless404.keeptrack.screens
 
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -49,6 +50,13 @@ class ScreenshotTest {
             rule.onAllNodesWithText("Entrar como invitado")[0].performClick()
         }
         shot("1-hoy")
+        // Marcar el primer bloque: aparece el aviso de experiencia y monedas.
+        rule.onAllNodes(isToggleable())[0].performClick()
+        for (i in 1..6) {
+            Thread.sleep(250)
+            rule.waitForIdle()
+            rule.onRoot().captureRoboImage("build/capturas/1b-recompensa-$i.png")
+        }
         tab("Tareas"); shot("2-tareas")
         tab("Estadísticas"); shot("3-estadisticas")
         tab("Rutina"); shot("4-rutina")

@@ -101,6 +101,27 @@ arriba a la derecha abre tu Perfil.
 Rachas: cuanto más larga, más "arde" el icono: Chispa (1 día), Llama (3),
 Hoguera (7), Incendio (14) y Leyenda (30), con halo, llama y chispas.
 
+## Experiencia, niveles y monedas
+
+Todo lo que completas da experiencia (XP, sin tope) y monedas (con tope):
+
+| Acción | XP | Monedas |
+|---|---|---|
+| Bloque hecho | 5 | 2 |
+| Tarea hecha | 5 | 3 |
+| Día completo (todo hecho) | 25 | 15 |
+| Sesión de gimnasio | 20 | 10 |
+| Racha sube de nivel (Chispa → Leyenda) | 50 | 20 / 40 / 80 / 150 / 300 |
+| Logro | 100 | 50 |
+| Cada nivel nuevo | – | 50 (fuera del tope) |
+
+- Topes de monedas: 120 al día, 600 a la semana y 2.000 al mes.
+- Solo cuenta lo marcado hoy o ayer. Si desmarcas algo, se devuelve.
+- Cada recompensa tiene una clave única, así que nada se cobra dos veces.
+- Nivel N: hacen falta 100 × (N − 1)^1,5 XP en total. Títulos: Novato, Constante (10),
+  Disciplinado (20), Imparable (30), Maestro (40), Leyenda (50), Mito (75), Inmortal (100).
+- En el Perfil, la tarjeta de nivel muestra la XP, las monedas, los topes y el historial.
+
 ## Gimnasio (sección secreta)
 
 Registra sesiones con ejercicios, series, peso y repeticiones. Puntos:
@@ -229,6 +250,7 @@ de la app por los del archivo.
 - `days`: tipo de cada día (normal, festivo, libre).
 - `tasks`: tareas puntuales con su recordatorio.
 - `gym_sessions` y `gym_sets`: sesiones de gimnasio y sus series.
+- `rewards`: movimientos de experiencia y monedas.
 
 El esquema de cada versión de la base de datos se guarda en `app/schemas`.
 

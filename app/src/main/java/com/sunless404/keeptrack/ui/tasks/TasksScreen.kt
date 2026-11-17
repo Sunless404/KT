@@ -75,6 +75,7 @@ import com.sunless404.keeptrack.ui.common.HelpTexts
 import com.sunless404.keeptrack.ui.common.KtIcons
 import com.sunless404.keeptrack.ui.common.TopActions
 import com.sunless404.keeptrack.ui.common.appear
+import com.sunless404.keeptrack.ui.common.rememberTick
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flatMapLatest
@@ -263,6 +264,7 @@ private fun DaySheet(
     onEdit: (Task) -> Unit,
     onCheck: (Task, Boolean) -> Unit,
 ) {
+    val tick = rememberTick()
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
             Text(fmtLongDate(date), style = MaterialTheme.typography.headlineSmall)
@@ -284,7 +286,7 @@ private fun DaySheet(
                         modifier = Modifier.fillMaxWidth().clickable { onEdit(t) },
                     ) {
                         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
-                            Checkbox(checked = t.done, onCheckedChange = { onCheck(t, it) })
+                            Checkbox(checked = t.done, onCheckedChange = { tick(); onCheck(t, it) })
                             Column(Modifier.weight(1f).padding(top = 10.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(

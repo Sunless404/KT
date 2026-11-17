@@ -77,6 +77,7 @@ import com.sunless404.keeptrack.ui.common.HelpTexts
 import com.sunless404.keeptrack.ui.common.KtIcons
 import com.sunless404.keeptrack.ui.common.TopActions
 import com.sunless404.keeptrack.ui.common.appear
+import com.sunless404.keeptrack.ui.common.rememberTick
 import com.sunless404.keeptrack.ui.common.ProgressRing
 import com.sunless404.keeptrack.ui.common.SectionLabel
 import com.sunless404.keeptrack.ui.common.composeColor
@@ -336,13 +337,14 @@ private fun NowCard(ui: TodayUi, onUnforeseen: () -> Unit) {
 
 @Composable
 private fun TaskRow(t: Task, onCheck: (Boolean) -> Unit, onClick: () -> Unit) {
+    val tick = rememberTick()
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
     ) {
         Row(Modifier.padding(start = 4.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = t.done, onCheckedChange = onCheck)
+            Checkbox(checked = t.done, onCheckedChange = { tick(); onCheck(it) })
             Column(Modifier.weight(1f)) {
                 Text(
                     t.title,
@@ -362,6 +364,7 @@ private fun TaskRow(t: Task, onCheck: (Boolean) -> Unit, onClick: () -> Unit) {
 
 @Composable
 private fun EntryRow(e: DayEntry, carry: Boolean, current: Boolean, enabled: Boolean, onStatus: (Status) -> Unit) {
+    val tick = rememberTick()
     var menu by remember { mutableStateOf(false) }
     val done = e.status == Status.HECHO
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
@@ -405,7 +408,7 @@ private fun EntryRow(e: DayEntry, carry: Boolean, current: Boolean, enabled: Boo
                         }.joinToString(" · ")
                         Text(extra, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Checkbox(checked = done, enabled = enabled, onCheckedChange = { onStatus(if (it) Status.HECHO else Status.PENDIENTE) })
+                    Checkbox(checked = done, enabled = enabled, onCheckedChange = { tick(); onStatus(if (it) Status.HECHO else Status.PENDIENTE) })
                 }
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {

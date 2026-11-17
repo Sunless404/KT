@@ -150,3 +150,24 @@ data class GymSet(
     val reps: Int,
     val position: Int = 0,
 )
+
+/**
+ * Movimiento de experiencia y monedas. [key] identifica el origen (por ejemplo "block:12")
+ * y es único: así nada se cobra dos veces, y al desmarcar se borra y se devuelve.
+ */
+@Serializable
+@Entity(tableName = "rewards", indices = [Index("key", unique = true), Index("epochDay")])
+data class Reward(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val key: String,
+    val kind: String,
+    val xp: Int,
+    /** Monedas concedidas tras aplicar el tope (negativas = gasto en la tienda). */
+    val coins: Int,
+    /** Si cuenta para los topes diario/semanal/mensual. */
+    val capped: Boolean,
+    /** Día (epochDay) en que se ganó, para los topes. */
+    val epochDay: Long,
+    val createdAt: Long,
+    val label: String,
+)

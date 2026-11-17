@@ -70,6 +70,8 @@ class Updater(private val app: App) {
      * Devuelve null si va bien, o el motivo si no se pudo comprobar.
      */
     suspend fun check(force: Boolean = false): String? {
+        // Las versiones de desarrollo llevan otra firma: no pueden actualizarse a la publicada.
+        if (BuildConfig.DEBUG) return "Esta es una versión de desarrollo: las actualizaciones solo funcionan en la publicada en GitHub."
         val now = System.currentTimeMillis()
         if (!force && now - lastCheck < 60_000L) return null
         val result = withContext(Dispatchers.IO) {

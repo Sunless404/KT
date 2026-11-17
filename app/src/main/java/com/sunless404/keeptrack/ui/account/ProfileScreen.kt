@@ -71,7 +71,9 @@ import com.sunless404.keeptrack.domain.Achievements
 import com.sunless404.keeptrack.domain.ES
 import com.sunless404.keeptrack.domain.GymScore
 import com.sunless404.keeptrack.domain.ProfileTotals
-import com.sunless404.keeptrack.domain.Stats
+import com.sunless404.keeptrack.domain.Totals
+import com.sunless404.keeptrack.domain.EconomyRules
+import com.sunless404.keeptrack.data.WalletState
 import com.sunless404.keeptrack.ui.common.AnimatedNumber
 import com.sunless404.keeptrack.ui.common.Avatar
 import com.sunless404.keeptrack.ui.common.HelpButton
@@ -98,16 +100,7 @@ class ProfileViewModel(app: Application) : AndroidViewModel(app) {
         repo.observeGymSessions(),
         repo.observeGymSets(),
     ) { days, tasks, sessions, sets ->
-        val streaks = Stats.streaks(days.values, today.toEpochDay())
-        ProfileTotals(
-            blocksDone = days.values.sumOf { d -> d.entries.count { it.status == Status.HECHO } },
-            tasksDone = tasks.count { it.done },
-            gymSessions = sessions.size,
-            gymExercises = sets.map { GymScore.normalize(it.exercise) }.distinct().size,
-            bestStreak = streaks.maxOfOrNull { it.best } ?: 0,
-            bestByHabit = streaks.associate { it.habit to it.best },
-            currentByHabit = streaks.associate { it.habit to it.current },
-        )
+        Totals.compute(days.values, tasks, sessions, sets, today.toEpochDay()).first
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileTotals())
 }
 
@@ -119,6 +112,8 @@ fun ProfileScreen(vm: ProfileViewModel, onBack: () -> Unit, onSettings: () -> Un
     val profile by app.profile.profile.collectAsState()
     val account by app.cloud.account.collectAsState()
     val totals by vm.totals.collectAsStateWithLifecycle()
+    val wallet by remember { app.repo.wallet.observe() }.collectAsState(initial = WalletState())
+    var showWallet by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -148,6 +143,7 @@ fun ProfileScreen(vm: ProfileViewModel, onBack: () -> Unit, onSettings: () -> Un
                         "Toca tu foto para elegir otra de la galería.",
                         "«Editar perfil» cambia tu nombre visible y tu biografía. Tus amigos los ven en la clasificación.",
                         "Los logros se desbloquean solos al completar bloques, rachas, tareas y sesiones de gimnasio.",
+                        "Todo lo que completas da experiencia (sube tu nivel) y monedas (con tope diario, semanal y mensual). Toca la tarjeta de nivel para ver los topes y el historial.",
                         "Desde aquí entras en Ajustes y gestionas tu cuenta.",
                     ),
                 )
@@ -193,6 +189,7 @@ fun ProfileScreen(vm: ProfileViewModel, onBack: () -> Unit, onSettings: () -> Un
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             }
         }
+        item { LevelCard(wallet, onClick = { showWallet = true }) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatTile("Bloques hechos", totals.blocksDone, KtIcons.Routine, 1, Modifier.weight(1f))
@@ -237,6 +234,8 @@ fun ProfileScreen(vm: ProfileViewModel, onBack: () -> Unit, onSettings: () -> Un
             }
         }
     }
+
+    if (showWallet) WalletSheet(wallet) { showWallet = false }
 
     if (editing) {
         var n by remember { mutableStateOf(profile.displayName) }
@@ -324,6 +323,107 @@ private fun AchievementTile(a: Achievement, index: Int, modifier: Modifier) {
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(top = 4.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun LevelCard(w: WalletState, onClick: () -> Unit) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val p by animateFloatAsState(if (shown) w.level.progress else 0f, tween(1100, 200, FastOutSlowInEasing), label = "xp")
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+        shape = MaterialTheme.shapes.large,
+        modifier = Modifier.fillMaxWidth().appear(1),
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(contentAlignment = Alignment.Center) {
+                com.sunless404.keeptrack.ui.common.ProgressRing(p, size = 64.dp, stroke = 6.dp, color = Brand.Accent) {}
+                AnimatedNumber(w.level.level, MaterialTheme.typography.titleLarge)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(w.level.title, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    if (w.level.xpForNext == 0) "Nivel máximo" else "${w.level.xpInLevel} / ${w.level.xpForNext} XP para el nivel ${w.level.level + 1}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(KtIcons.Coin, null, Modifier.size(20.dp), tint = Gold)
+                    Spacer(Modifier.width(4.dp))
+                    AnimatedNumber(w.coins, MaterialTheme.typography.titleLarge)
+                }
+                Text("monedas", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+private val Gold = Color(0xFFFFC857)
+private val dayFmt = DateTimeFormatter.ofPattern("d MMM", ES)
+
+@Composable
+private fun WalletSheet(w: WalletState, onDismiss: () -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
+        LazyColumn(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            item {
+                Text("Monedas y experiencia", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "Las monedas tienen tope para que la tienda tenga valor. La experiencia no tiene tope.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item { CapBar("Hoy", w.today, EconomyRules.DAILY_CAP) }
+            item { CapBar("Esta semana", w.week, EconomyRules.WEEKLY_CAP) }
+            item { CapBar("Este mes", w.month, EconomyRules.MONTHLY_CAP) }
+            item {
+                Text(
+                    "Cómo se gana: bloque 5 XP y 2 monedas · tarea 5 XP y 3 · día completo 25 XP y 15 · sesión de gym 20 XP y 10 · " +
+                        "racha que sube de nivel 50 XP y 20–300 · logro 100 XP y 50 · cada nivel nuevo 50 monedas extra. " +
+                        "Solo cuenta lo marcado hoy o ayer; si desmarcas algo, se devuelve.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item { SectionLabel("Últimos movimientos") }
+            if (w.history.isEmpty()) item { Text("Aún nada. ¡Marca tu primer bloque!", style = MaterialTheme.typography.bodySmall) }
+            items(w.history.take(50).size) { i ->
+                val r = w.history[i]
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(r.label, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                        Text(
+                            java.time.LocalDate.ofEpochDay(r.epochDay).format(dayFmt),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (r.xp != 0) Text("+${r.xp} XP  ", style = MaterialTheme.typography.labelLarge, color = Brand.Accent)
+                    Text(if (r.coins >= 0) "+${r.coins}" else "${r.coins}", style = MaterialTheme.typography.labelLarge, color = Gold)
+                }
+            }
+            item { Spacer(Modifier.height(24.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun CapBar(label: String, value: Int, cap: Int) {
+    val p by animateFloatAsState((value.toFloat() / cap).coerceIn(0f, 1f), tween(700), label = "tope")
+    Column {
+        Row {
+            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            Text("$value / $cap", style = MaterialTheme.typography.labelLarge)
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(p).clip(CircleShape).background(Gold))
         }
     }
 }

@@ -45,6 +45,7 @@ class App : Application() {
         repo.onChanged = {
             scope.launch { alarms.sync() }
             cloud.scheduleUpload()
+            scheduleMilestones()
         }
         scope.launch {
             if (!prefs.seeded) {
@@ -52,6 +53,18 @@ class App : Application() {
                 prefs.seeded = true
             }
             alarms.sync()
+            repo.evaluateMilestones()
+        }
+    }
+
+    private var milestonesJob: kotlinx.coroutines.Job? = null
+
+    /** Rachas y logros se revisan poco después de cada cambio (agrupando cambios seguidos). */
+    private fun scheduleMilestones() {
+        milestonesJob?.cancel()
+        milestonesJob = scope.launch {
+            kotlinx.coroutines.delay(1500)
+            runCatching { repo.evaluateMilestones() }
         }
     }
 }

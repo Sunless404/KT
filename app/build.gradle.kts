@@ -63,6 +63,12 @@ android {
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
         )
     }
+    sourceSets {
+        // Los esquemas exportados sirven para probar las migraciones de la base de datos.
+        // Solo en la versión debug (la publicada no los lleva); Robolectric lee los assets de ahí.
+        getByName("debug").assets.srcDir("$projectDir/schemas")
+    }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.all {
@@ -98,6 +104,7 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.room:room-testing:2.6.1")
     // Capturas de pantalla en la JVM (sin emulador), solo para revisar el diseño.
     testImplementation("org.robolectric:robolectric:4.13")
     testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.1")

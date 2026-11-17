@@ -15,6 +15,7 @@ data class Backup(
     val tasks: List<Task> = emptyList(),
     val gymSessions: List<GymSession> = emptyList(),
     val gymSets: List<GymSet> = emptyList(),
+    val rewards: List<Reward> = emptyList(),
     val settings: BackupSettings = BackupSettings(),
 ) {
     fun toJson(): String = json.encodeToString(serializer(), this)

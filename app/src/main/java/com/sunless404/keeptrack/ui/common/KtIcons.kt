@@ -99,6 +99,16 @@ object KtIcons {
         fills = listOf("M12,2 L13.9,8.6 L20.5,10.5 L13.9,12.4 L12,19 L10.1,12.4 L3.5,10.5 L10.1,8.6 Z", "M18.5,15.5 L19.3,17.7 L21.5,18.5 L19.3,19.3 L18.5,21.5 L17.7,19.3 L15.5,18.5 L17.7,17.7 Z"),
     )
 
+    /** Moneda de la app. */
+    val Coin = icon(
+        "coin",
+        "M12,2.75 a9.25,9.25 0 1,0 0.01,0 Z",
+        "M12,6.5 a5.5,5.5 0 1,0 0.01,0 Z",
+        fills = listOf("M12,8.6 L13.1,11 L15.4,12 L13.1,13 L12,15.4 L10.9,13 L8.6,12 L10.9,11 Z"),
+        width = 1.6f,
+    )
+    val Bolt = icon("bolt", fills = listOf("M13.5,2 L4.5,13.5 H11 L10,22 L19.5,9.5 H13 Z"))
+
     /** Escritorio con lámpara (estudio). */
     val Study = icon(
         "study",

@@ -17,7 +17,13 @@ enum class Habit(val label: String, val category: Category) {
     SUENO("Sueño", Category.SUENO),
 }
 
-data class Streak(val habit: Habit, val current: Int, val best: Int)
+data class Streak(
+    val habit: Habit,
+    val current: Int,
+    val best: Int,
+    /** Primer día (epochDay) de la racha actual; null si no hay racha. Sirve para no repetir recompensas. */
+    val currentStart: Long? = null,
+)
 
 data class WeekSummary(val mondayEpoch: Long, val total: Int, val done: Int) {
     val percent: Int get() = if (total == 0) 0 else done * 100 / total
@@ -60,14 +66,15 @@ object Stats {
     fun streaks(days: Collection<DayData>, todayEpoch: Long, zone: ZoneId = ZoneId.systemDefault()): List<Streak> {
         val sorted = days.sortedBy { it.epochDay }
         return Habit.entries.map { habit ->
-            val results = sorted.mapNotNull { outcome(it, habit, todayEpoch, zone) }
+            val results = sorted.mapNotNull { d -> outcome(d, habit, todayEpoch, zone)?.let { d.epochDay to it } }
             var best = 0
             var run = 0
-            results.forEach { ok ->
+            results.forEach { (_, ok) ->
                 run = if (ok) run + 1 else 0
                 best = maxOf(best, run)
             }
-            Streak(habit, current = results.takeLastWhile { it }.size, best = best)
+            val current = results.takeLastWhile { it.second }
+            Streak(habit, current = current.size, best = best, currentStart = current.firstOrNull()?.first)
         }
     }
 
