@@ -37,7 +37,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -118,11 +118,10 @@ fun TasksScreen(vm: TasksViewModel, onOpenProfile: () -> Unit) {
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 onClick = { editing = Task(epochDay = (openDay ?: today.toEpochDay()), title = "") },
-                icon = { Icon(Icons.Default.Add, null) },
-                text = { Text("Nueva tarea") },
-            )
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(18.dp),
+            ) { Icon(Icons.Default.Add, "Nuevo compromiso") }
         },
     ) { inner ->
         Column(
@@ -131,7 +130,7 @@ fun TasksScreen(vm: TasksViewModel, onOpenProfile: () -> Unit) {
         ) {
             Row(Modifier.fillMaxWidth().padding(start = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Tareas", style = MaterialTheme.typography.headlineMedium)
+                    Text("Agenda", style = MaterialTheme.typography.headlineMedium)
                     Text(
                         month.format(monthFmt).replaceFirstChar { it.uppercase(ES) },
                         style = MaterialTheme.typography.bodyMedium,
@@ -141,7 +140,7 @@ fun TasksScreen(vm: TasksViewModel, onOpenProfile: () -> Unit) {
                 if (month != YearMonth.now()) TextButton(onClick = { vm.month.value = YearMonth.now() }) { Text("Hoy") }
                 IconButton(onClick = { vm.shift(-1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Mes anterior") }
                 IconButton(onClick = { vm.shift(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Mes siguiente") }
-                TopActions("Tareas", HelpTexts.TASKS, onOpenProfile)
+                TopActions("Agenda", HelpTexts.TASKS, onOpenProfile)
             }
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth()) {
@@ -245,7 +244,7 @@ private fun DayCell(date: LocalDate, inMonth: Boolean, isToday: Boolean, tasks: 
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = alpha),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (t.done) 0.4f else 1f))
+                    .background((if (t.highPriority) HighPriority.copy(alpha = 0.35f) else MaterialTheme.colorScheme.secondaryContainer).copy(alpha = if (t.done) 0.4f else 1f))
                     .padding(horizontal = 3.dp),
             )
         }
@@ -269,7 +268,7 @@ private fun DaySheet(
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
             Text(fmtLongDate(date), style = MaterialTheme.typography.headlineSmall)
             Text(
-                if (tasks.isEmpty()) "Nada pendiente" else "${tasks.count { !it.done }} pendientes de ${tasks.size}",
+                if (tasks.isEmpty()) "Sin compromisos" else "${tasks.count { !it.done }} pendientes de ${tasks.size}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -296,7 +295,11 @@ private fun DaySheet(
                                         modifier = Modifier.weight(1f),
                                     )
                                     t.timeMin?.let {
-                                        Text(fmtTime(it), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
+                                        Text(fmtTime(it) + (t.endMin?.let { e -> "–" + fmtTime(e) } ?: ""), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
+                                    }
+                                    if (t.highPriority) {
+                                        Spacer(Modifier.width(6.dp))
+                                        Icon(KtIcons.Flag, "Prioridad alta", Modifier.size(16.dp), tint = HighPriority)
                                     }
                                     if (t.notify) {
                                         Spacer(Modifier.width(6.dp))
@@ -314,7 +317,7 @@ private fun DaySheet(
             }
             FilledTonalButton(onClick = onAdd, modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
                 Icon(Icons.Default.Add, null)
-                Text(" Añadir tarea este día")
+                Text(" Añadir compromiso")
             }
         }
     }

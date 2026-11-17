@@ -35,7 +35,7 @@ object Stats {
 
     /** Minutos previstos y hechos por categoría. */
     fun hoursByCategory(entries: List<DayEntry>): List<CategoryHours> =
-        entries.groupBy { it.category }.map { (cat, list) ->
+        entries.filter { it.status != Status.SALTADO }.groupBy { it.category }.map { (cat, list) ->
             CategoryHours(
                 cat,
                 plannedMin = list.sumOf { it.durationMin },
@@ -56,7 +56,8 @@ object Stats {
      */
     fun outcome(day: DayData, habit: Habit, todayEpoch: Long, zone: ZoneId): Boolean? {
         if (day.type != DayType.NORMAL || day.epochDay > todayEpoch) return null
-        val list = day.entries.filter { it.category == habit.category }
+        // Lo quitado de un día no cuenta: como si ese día no lo tuviera.
+        val list = day.entries.filter { it.category == habit.category && it.status != Status.SALTADO }
         if (list.isEmpty()) return null
         val ok = list.all { it.status == Status.HECHO && (habit != Habit.SUENO || sleepOnTime(it, zone)) }
         return if (!ok && day.epochDay == todayEpoch) null else ok
@@ -83,7 +84,7 @@ object Stats {
         days.filter { it.epochDay <= todayEpoch && it.entries.isNotEmpty() }
             .groupBy { mondayOf(LocalDate.ofEpochDay(it.epochDay)).toEpochDay() }
             .map { (monday, list) ->
-                val entries = list.flatMap { it.entries }
+                val entries = list.flatMap { it.entries }.filter { it.status != Status.SALTADO }
                 WeekSummary(monday, entries.size, entries.count { it.status == Status.HECHO })
             }
             .sortedByDescending { it.mondayEpoch }

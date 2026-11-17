@@ -174,7 +174,7 @@ class Alarms(private val app: App) {
             .setTimeoutAfter((endAt - now).coerceAtLeast(60_000))
             .addAction(0, "Hecho", action(e.id, ACTION_DONE, 0))
             .addAction(0, "Posponer 10 min", action(e.id, ACTION_SNOOZE, 1))
-            .addAction(0, "Saltar", action(e.id, ACTION_SKIP, 2))
+            .addAction(0, "Quitar de hoy", action(e.id, ACTION_SKIP, 2))
             .build()
         try {
             nm.notify(e.id.toInt(), n)

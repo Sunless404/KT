@@ -62,7 +62,7 @@ import com.sunless404.keeptrack.update.UpdateDialog
 
 enum class Screen(val label: String, val icon: ImageVector?) {
     HOY("Hoy", KtIcons.Today),
-    TAREAS("Tareas", KtIcons.Tasks),
+    TAREAS("Agenda", KtIcons.Calendar),
     ESTADISTICAS("Estadísticas", KtIcons.Stats),
     RUTINA("Rutina", KtIcons.Routine),
     ASISTENTE("Asistente", KtIcons.Assistant),

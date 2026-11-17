@@ -34,4 +34,19 @@ class MigrationTest {
         }
         db.execSQL("INSERT INTO rewards (`key`, kind, xp, coins, capped, epochDay, createdAt, label) VALUES ('block:1', 'BLOCK', 5, 2, 1, 20000, 0, 'x')")
     }
+
+    @Test
+    fun v3toV4AddsTaskFields() {
+        helper.createDatabase("prueba4.db", 3).use { db ->
+            db.execSQL("INSERT INTO tasks (epochDay, timeMin, title, description, notify, remindAt, done, doneAt) VALUES (20000, 600, 'Dentista', '', 1, NULL, 0, NULL)")
+        }
+        val db = helper.runMigrationsAndValidate("prueba4.db", 4, true, AppDatabase.MIGRATION_3_4)
+        db.query("SELECT title, endMin, priority, `repeat` FROM tasks").use { c ->
+            c.moveToFirst()
+            assertEquals("Dentista", c.getString(0))
+            assertEquals(true, c.isNull(1))
+            assertEquals(0, c.getInt(2))
+            assertEquals(0, c.getInt(3))
+        }
+    }
 }

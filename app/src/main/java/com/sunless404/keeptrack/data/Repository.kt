@@ -101,8 +101,9 @@ class Repository(private val db: AppDatabase) {
         val entries = dao.entriesBetween(epochDay, epochDay)
         val tasks = dao.tasksBetween(epochDay, epochDay)
         val type = dao.dayInfo(epochDay)?.type ?: DayType.NORMAL
-        val complete = type == DayType.NORMAL && entries.size + tasks.size > 0 &&
-            entries.all { it.status == Status.HECHO } && tasks.all { it.done }
+        val active = entries.filter { it.status != Status.SALTADO }
+        val complete = type == DayType.NORMAL && active.size + tasks.size > 0 &&
+            active.all { it.status == Status.HECHO } && tasks.all { it.done }
         if (complete) wallet.grant("day:$epochDay", RewardKind.DAY_COMPLETE, epochDay, label = "¡Día completo!", celebrate = true)
         else wallet.revoke("day:$epochDay")
     }
@@ -165,6 +166,14 @@ class Repository(private val db: AppDatabase) {
     suspend fun setTaskDone(id: Long, done: Boolean) {
         val t = dao.task(id) ?: return
         dao.upsertTask(t.copy(done = done, doneAt = if (done) System.currentTimeMillis() else null))
+        // Compromiso que se repite: al completarlo aparece el siguiente (una sola vez).
+        if (done) Repeat.next(java.time.LocalDate.ofEpochDay(t.epochDay), t.repeat)?.let { nextDay ->
+            val exists = dao.tasksBetween(nextDay.toEpochDay(), nextDay.toEpochDay()).any { it.title == t.title && it.repeat == t.repeat }
+            if (!exists) {
+                val shift = (nextDay.toEpochDay() - t.epochDay) * 86_400_000L
+                dao.upsertTask(t.copy(id = 0, epochDay = nextDay.toEpochDay(), done = false, doneAt = null, remindAt = t.remindAt?.let { it + shift }))
+            }
+        }
         if (done) wallet.grant("task:$id", RewardKind.TASK, t.epochDay, label = t.title) else wallet.revoke("task:$id")
         checkDayComplete(t.epochDay)
         onChanged()

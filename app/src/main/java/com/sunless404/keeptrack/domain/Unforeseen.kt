@@ -60,4 +60,11 @@ object Unforeseen {
     /** true si, tras aplicar [changed], algún bloque cambiado entra en un bloque de sueño. */
     fun entersSleep(entries: List<DayEntry>, carry: List<DayEntry>, changed: List<DayEntry>): Boolean =
         changed.any { sleepHits(entries, carry, it.startMin, it.endMin, it.id).isNotEmpty() }
+
+    /** Retrasa [minutes] el bloque [from] y los pendientes que empiezan después; el sueño no se mueve. */
+    fun delayFrom(entries: List<DayEntry>, from: DayEntry, minutes: Int): List<DayEntry> =
+        entries.filter {
+            (it.id == from.id || it.startMin > from.startMin) && it.category != Category.SUENO &&
+                (it.status == Status.PENDIENTE || it.status == Status.POSPUESTO)
+        }.map { move(it, it.startMin + minutes) }
 }

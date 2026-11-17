@@ -43,7 +43,18 @@ class StatsAndUnforeseenTest {
         )
         assertEquals(180, h.first { it.category == Category.ESTUDIO }.plannedMin)
         assertEquals(120, h.first { it.category == Category.ESTUDIO }.doneMin)
-        assertEquals(0, h.first { it.category == Category.GIMNASIO }.doneMin)
+        // Lo quitado de un día no cuenta como previsto.
+        assertTrue(h.none { it.category == Category.GIMNASIO })
+    }
+
+    @Test
+    fun removedBlockDoesNotBreakStreak() {
+        val days = listOf(
+            day(1, DayType.NORMAL, e(1, Category.ESTUDIO, 600, 660, Status.HECHO)),
+            day(2, DayType.NORMAL, e(2, Category.ESTUDIO, 600, 660, Status.SALTADO)),
+            day(3, DayType.NORMAL, e(3, Category.ESTUDIO, 600, 660, Status.HECHO)),
+        )
+        assertEquals(2, Stats.streaks(days, todayEpoch = 3).first { it.habit == Habit.ESTUDIO }.current)
     }
 
     @Test

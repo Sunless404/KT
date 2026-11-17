@@ -23,7 +23,7 @@ enum class Category(val label: String, val color: Long, val notifiesByDefault: B
 enum class Status(val label: String) {
     PENDIENTE("Pendiente"),
     HECHO("Hecho"),
-    SALTADO("Saltado"),
+    SALTADO("Quitado"),
     POSPUESTO("Pospuesto"),
 }
 
@@ -126,7 +126,32 @@ data class Task(
     val remindAt: Long? = null,
     val done: Boolean = false,
     val doneAt: Long? = null,
-)
+    /** Hora de fin (minutos desde las 00:00); null = sin hora de fin. */
+    val endMin: Int? = null,
+    /** 0 normal, 1 alta. */
+    @androidx.room.ColumnInfo(defaultValue = "0") val priority: Int = 0,
+    /** Cada cuánto se repite: ver [Repeat]. */
+    @androidx.room.ColumnInfo(defaultValue = "0") val repeat: Int = Repeat.NONE,
+) {
+    val highPriority get() = priority > 0
+}
+
+/** Repetición de un compromiso: al marcarlo como hecho se crea el siguiente. */
+object Repeat {
+    const val NONE = 0
+    const val DAILY = 1
+    const val WEEKLY = 2
+    const val MONTHLY = 3
+
+    val labels = linkedMapOf(NONE to "No se repite", DAILY to "Cada día", WEEKLY to "Cada semana", MONTHLY to "Cada mes")
+
+    fun next(day: java.time.LocalDate, mode: Int): java.time.LocalDate? = when (mode) {
+        DAILY -> day.plusDays(1)
+        WEEKLY -> day.plusWeeks(1)
+        MONTHLY -> day.plusMonths(1)
+        else -> null
+    }
+}
 
 /** Sesión de gimnasio de un día. */
 @Serializable

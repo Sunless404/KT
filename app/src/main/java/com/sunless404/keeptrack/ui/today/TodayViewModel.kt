@@ -37,19 +37,22 @@ data class TodayUi(
     val isToday get() = date == today
     val isFuture get() = date > today
 
-    private val total get() = entries.size + tasks.size
-    val done get() = entries.count { it.status == Status.HECHO } + tasks.count { it.done }
+    /** Bloques del día sin los quitados de hoy. */
+    val visibleEntries get() = entries.filter { it.status != Status.SALTADO }
+
+    private val total get() = visibleEntries.size + tasks.size
+    val done get() = visibleEntries.count { it.status == Status.HECHO } + tasks.count { it.done }
     val totalCount get() = total
     val progress get() = if (total == 0) 0f else done.toFloat() / total
 
     /** Bloque en curso (solo si se está viendo hoy). */
     val current: DayEntry?
         get() = if (!isToday) null else
-            entries.lastOrNull { nowMin >= it.startMin && nowMin < it.endMin }
-                ?: carry.firstOrNull { nowMin < it.endMin - 1440 }
+            visibleEntries.lastOrNull { nowMin >= it.startMin && nowMin < it.endMin }
+                ?: carry.firstOrNull { it.status != Status.SALTADO && nowMin < it.endMin - 1440 }
 
     val next: DayEntry?
-        get() = if (!isToday) null else entries.firstOrNull { it.startMin > nowMin }
+        get() = if (!isToday) null else visibleEntries.firstOrNull { it.startMin > nowMin && it.status != Status.HECHO }
 }
 
 class TodayViewModel(app: Application) : AndroidViewModel(app) {
