@@ -16,7 +16,7 @@ object HelpTexts {
         "Las tareas también aparecen en Hoy, en «Extras».",
     )
     val STATS = listOf(
-        "Las rachas cuentan días seguidos cumpliendo cada hábito. Cuanto más larga, más arde su icono: Chispa, Llama, Hoguera, Incendio y Leyenda.",
+        "Las rachas cuentan días seguidos cumpliendo cada hábito. Cuantos más días, más cambia la llama: de naranja a rojo, rosa, violeta, azul y blanco dorado (1, 3, 7, 14, 30, 60 y 100 días).",
         "Festivos, días libres y días sin ese bloque no rompen la racha.",
         "«Horas por categoría» compara lo previsto con lo hecho en la semana; cambia de semana con las flechas.",
         "Pista: toca la racha de gimnasio…",

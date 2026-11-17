@@ -246,43 +246,39 @@ private fun StreakCard(s: Streak, visible: Boolean, delayMs: Int, onClick: (() -
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(s.habit.label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-                    Text(
-                        level.label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (s.current > 0) levelColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                StreakIcon(
+                Icon(
                     when (s.habit) {
                         Habit.ESTUDIO -> KtIcons.Study
                         Habit.GIMNASIO -> KtIcons.Dumbbell
                         Habit.LECTURA -> KtIcons.Book
                         Habit.SUENO -> KtIcons.Bed
                     },
-                    s.current,
-                    idle = MaterialTheme.colorScheme.outline,
-                    size = 48.dp,
+                    null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Text("  ${s.habit.label}", style = MaterialTheme.typography.labelLarge, maxLines = 1)
             }
-            Row(verticalAlignment = Alignment.Bottom) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StreakFlame(s.current, 52.dp, idle = MaterialTheme.colorScheme.outline)
                 Text(
                     "$count", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
                     color = if (s.current > 0) levelColor else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text(if (s.current == 1) " día" else " días", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 6.dp))
+                Text(if (s.current == 1) " día" else " días", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 10.dp))
             }
             val next = level.next
             Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(toNext).clip(CircleShape).background(levelColor))
+                Box(Modifier.fillMaxHeight().fillMaxWidth(toNext).clip(CircleShape).background(next?.let { Color(it.color) } ?: levelColor))
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                if (next != null) "${next.minDays - s.current} para ${next.label} · mejor ${s.best}" else "Nivel máximo · mejor ${s.best}",
+                when {
+                    next == null -> "Llama al máximo · mejor ${s.best}"
+                    next.minDays - s.current == 1 -> "Mañana mejora la llama · mejor ${s.best}"
+                    else -> "${next.minDays - s.current} días para mejorar la llama · mejor ${s.best}"
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
+                maxLines = 2,
             )
         }
     }

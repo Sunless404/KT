@@ -9,7 +9,8 @@ enum class RewardKind(val xp: Int, val coins: Int, val label: String, val capped
     DAY_COMPLETE(25, 15, "Día completo"),
     GYM_SESSION(20, 10, "Sesión de gimnasio"),
     ACHIEVEMENT(100, 50, "Logro"),
-    STREAK_LEVEL(50, 0, "Racha sube de nivel"),
+    /** Fuera del tope: subir una racha cuesta días reales y no se puede acelerar. */
+    STREAK_LEVEL(50, 0, "Racha sube de nivel", capped = false),
     /** Las de subir de nivel no cuentan para el tope: ya las limita la experiencia. */
     LEVEL_UP(0, 50, "Subida de nivel", capped = false),
 }
@@ -22,6 +23,8 @@ fun streakLevelCoins(level: StreakLevel): Int = when (level) {
     StreakLevel.BONFIRE -> 80
     StreakLevel.BLAZE -> 150
     StreakLevel.LEGEND -> 300
+    StreakLevel.NOVA -> 450
+    StreakLevel.SUPERNOVA -> 600
 }
 
 /** Nivel del usuario a partir de la experiencia total. */

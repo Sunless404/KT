@@ -123,7 +123,7 @@ class Repository(private val db: AppDatabase) {
             StreakLevel.entries.filter { it != StreakLevel.NONE && it.minDays <= st.current }.forEach { lvl ->
                 wallet.grant(
                     "streak:${st.habit}:${lvl.name}:$start", RewardKind.STREAK_LEVEL,
-                    coins = streakLevelCoins(lvl), label = "${st.habit.label}: ${lvl.label}", celebrate = true,
+                    coins = streakLevelCoins(lvl), label = "${st.habit.label}: racha de ${lvl.minDays} ${if (lvl.minDays == 1) "día" else "días"}", celebrate = true,
                 )
             }
         }

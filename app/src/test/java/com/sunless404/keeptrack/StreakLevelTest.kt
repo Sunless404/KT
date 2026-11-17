@@ -15,14 +15,17 @@ class StreakLevelTest {
         assertEquals(StreakLevel.FLAME, StreakLevel.of(3))
         assertEquals(StreakLevel.BONFIRE, StreakLevel.of(13))
         assertEquals(StreakLevel.BLAZE, StreakLevel.of(14))
-        assertEquals(StreakLevel.LEGEND, StreakLevel.of(400))
+        assertEquals(StreakLevel.LEGEND, StreakLevel.of(59))
+        assertEquals(StreakLevel.NOVA, StreakLevel.of(60))
+        assertEquals(StreakLevel.SUPERNOVA, StreakLevel.of(400))
     }
 
     @Test
     fun progressToNextLevel() {
         assertEquals(0f, StreakLevel.progress(3), 0.001f)
         assertEquals(0.5f, StreakLevel.progress(5), 0.001f)
-        assertEquals(1f, StreakLevel.progress(30), 0.001f)
+        assertEquals(0.5f, StreakLevel.progress(45), 0.001f)
+        assertEquals(1f, StreakLevel.progress(100), 0.001f)
     }
 
     @Test
