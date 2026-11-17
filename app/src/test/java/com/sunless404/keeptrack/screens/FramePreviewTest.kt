@@ -76,23 +76,32 @@ class FramePreviewTest {
     }
 
     @Test
-    @Config(qualifiers = "w460dp-h400dp-night-xxhdpi")
+    @Config(qualifiers = "w460dp-h420dp-night-xxhdpi")
     fun ilustrado() {
+        var idx by androidx.compose.runtime.mutableIntStateOf(0)
         rule.mainClock.autoAdvance = false
         rule.setContent {
             KeepTrackTheme {
-                Row(
+                val f = com.sunless404.keeptrack.ui.cosmetics.ImageFrames.all[idx]
+                Column(
                     Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
-                    horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    FramedAvatar(null, "K", 130.dp, com.sunless404.keeptrack.ui.cosmetics.ImageFrames.alucardNoble)
-                    FramedAvatar(null, "K", 56.dp, com.sunless404.keeptrack.ui.cosmetics.ImageFrames.alucardNoble)
+                    Text(f.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+                    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                        FramedAvatar(null, "K", 130.dp, f)
+                        FramedAvatar(null, "K", 56.dp, f)
+                    }
                 }
             }
         }
-        for (f in 0 until 40) {
-            rule.mainClock.advanceTimeBy(100)
-            rule.onRoot().captureRoboImage("build/marcos/ilustrado-$f.png")
+        com.sunless404.keeptrack.ui.cosmetics.ImageFrames.all.forEachIndexed { i, f ->
+            idx = i
+            rule.mainClock.advanceTimeByFrame()
+            for (k in 0 until 40) {
+                rule.mainClock.advanceTimeBy(100)
+                rule.onRoot().captureRoboImage("build/marcos/${f.id}-$k.png")
+            }
         }
     }
 
