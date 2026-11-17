@@ -231,11 +231,8 @@ fun StatsScreen(vm: StatsViewModel, onOpenGym: () -> Unit, onOpenProfile: () -> 
     }
 }
 
-/** Dónde va la llama en la tarjeta de racha. */
-internal enum class FlameSpot { ACTUAL, ESQUINA, ESQUINA_GRANDE, JUNTO, DETRAS }
-
 @Composable
-internal fun StreakCard(s: Streak, visible: Boolean, delayMs: Int, onClick: (() -> Unit)?, modifier: Modifier, spot: FlameSpot = FlameSpot.ACTUAL) {
+private fun StreakCard(s: Streak, visible: Boolean, delayMs: Int, onClick: (() -> Unit)?, modifier: Modifier) {
     val count by animateIntAsState(if (visible) s.current else 0, tween(900, delayMs, FastOutSlowInEasing), label = "racha")
     val level = StreakLevel.of(s.current)
     val levelColor = Color(level.color)
@@ -248,10 +245,9 @@ internal fun StreakCard(s: Streak, visible: Boolean, delayMs: Int, onClick: (() 
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
         Box {
-        if (spot == FlameSpot.ESQUINA_GRANDE) {
-            Box(Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 8.dp)) {
-                StreakFlame(s.current, 40.dp, idle = MaterialTheme.colorScheme.outline)
-            }
+        // La llama, mediana, en la esquina superior derecha.
+        Box(Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 8.dp)) {
+            StreakFlame(s.current, 40.dp, idle = MaterialTheme.colorScheme.outline)
         }
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -264,24 +260,14 @@ internal fun StreakCard(s: Streak, visible: Boolean, delayMs: Int, onClick: (() 
                     },
                     null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Text("  ${s.habit.label}", style = MaterialTheme.typography.labelLarge, maxLines = 1, modifier = Modifier.weight(1f))
-                if (spot == FlameSpot.ESQUINA) StreakFlame(s.current, 28.dp, idle = MaterialTheme.colorScheme.outline)
+                Text("  ${s.habit.label}", style = MaterialTheme.typography.labelLarge, maxLines = 1, modifier = Modifier.weight(1f).padding(end = 34.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                when (spot) {
-                    FlameSpot.ACTUAL -> StreakFlame(s.current, 52.dp, idle = MaterialTheme.colorScheme.outline)
-                    FlameSpot.JUNTO -> StreakFlame(s.current, 30.dp, idle = MaterialTheme.colorScheme.outline)
-                    else -> {}
-                }
                 Text(
                     "$count", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
                     color = if (s.current > 0) levelColor else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(if (s.current == 1) " día" else " días", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 10.dp))
-                if (spot == FlameSpot.DETRAS) {
-                    Spacer(Modifier.width(4.dp))
-                    StreakFlame(s.current, 26.dp, idle = MaterialTheme.colorScheme.outline)
-                }
             }
             val next = level.next
             Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {

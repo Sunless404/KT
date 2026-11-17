@@ -98,9 +98,10 @@ class FramePreviewTest {
         com.sunless404.keeptrack.ui.cosmetics.ImageFrames.all.forEachIndexed { i, f ->
             idx = i
             rule.mainClock.advanceTimeByFrame()
-            val n = maxOf(40, f.period / 120)
+            // 20 fotogramas por segundo, hasta 6 s, para que el GIF se vea fluido.
+            val n = minOf(f.period, 6000) / 50
             for (k in 0 until n) {
-                rule.mainClock.advanceTimeBy(f.period.toLong() / n)
+                rule.mainClock.advanceTimeBy(50)
                 rule.onRoot().captureRoboImage("build/marcos/${f.id}-$k.png")
             }
         }

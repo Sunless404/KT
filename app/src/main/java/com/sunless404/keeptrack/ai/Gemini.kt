@@ -15,7 +15,18 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
-class AiException(message: String) : Exception(message)
+/** Error de Gemini. [code] es el código HTTP, [TIMEOUT] si tardó demasiado o [OFFLINE] si no hubo conexión. */
+open class AiException(message: String, val code: Int = 0) : Exception(message) {
+    /** Fallos pasajeros: vale la pena reintentar o probar otro modelo. */
+    val transient get() = code == TIMEOUT || code == 429 || code in 500..599
+    /** El modelo no existe o no se puede usar con esta clave: se prueba otro. */
+    val modelProblem get() = code == 404
+
+    companion object {
+        const val TIMEOUT = -1
+        const val OFFLINE = -2
+    }
+}
 
 data class AiModel(val id: String, val name: String)
 
@@ -33,8 +44,8 @@ object Gemini {
     private fun request(path: String, apiKey: String, body: String?): JsonObject {
         val conn = URL("$BASE/$path").openConnection() as HttpURLConnection
         try {
-            conn.connectTimeout = 15_000
-            conn.readTimeout = 120_000
+            conn.connectTimeout = 10_000
+            conn.readTimeout = 60_000
             conn.setRequestProperty("x-goog-api-key", apiKey)
             if (body != null) {
                 conn.requestMethod = "POST"
@@ -45,10 +56,14 @@ object Gemini {
             val code = conn.responseCode
             val text = (if (code in 200..299) conn.inputStream else conn.errorStream)
                 ?.use { it.readBytes().decodeToString() }.orEmpty()
-            if (code !in 200..299) throw AiException(errorMessage(code, text))
+            if (code !in 200..299) throw AiException(errorMessage(code, text), code)
             return json.parseToJsonElement(text).jsonObject
+        } catch (e: java.net.SocketTimeoutException) {
+            throw AiException("Gemini está tardando demasiado en responder. Inténtalo de nuevo en un rato.", AiException.TIMEOUT)
+        } catch (e: java.net.UnknownHostException) {
+            throw AiException("No hay conexión a Internet.", AiException.OFFLINE)
         } catch (e: IOException) {
-            throw AiException("No se pudo conectar con Gemini. Comprueba la conexión a Internet. (${e.message})")
+            throw AiException("No se pudo conectar con Gemini. Comprueba la conexión a Internet. (${e.message})", AiException.OFFLINE)
         } finally {
             conn.disconnect()
         }
@@ -66,6 +81,7 @@ object Gemini {
             401, 403 -> "La clave de API no es válida o no tiene permiso. Revísala en Ajustes."
             404 -> "El modelo elegido ya no existe. Pulsa «Probar clave y elegir modelo» en Ajustes."
             429 -> "Has llegado al límite gratuito de Gemini por ahora. Espera un rato (o hasta mañana) y vuelve a intentarlo."
+            503 -> "Los servidores de Gemini están saturados ahora mismo (503). Inténtalo en unos minutos."
             in 500..599 -> "Gemini no responde ahora mismo ($code). Inténtalo en unos minutos."
             else -> "Error $code: ${detail ?: "sin detalle"}"
         }
@@ -91,11 +107,37 @@ object Gemini {
         )
     }
 
+    /** Modelos gratuitos de reserva, por si el elegido está saturado o no responde. */
+    private val FALLBACKS = listOf("gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash")
+
     /**
      * Envía una conversación ([contents] en el formato de la API: role + parts) y
      * devuelve el texto de la respuesta, pedida en JSON.
+     *
+     * Si Gemini está saturado (503), tarda demasiado o se agota el cupo de un modelo,
+     * reintenta una vez y luego prueba otros modelos gratuitos antes de rendirse.
      */
-    suspend fun generate(apiKey: String, model: String, system: String, contents: JsonArray): String =
+    suspend fun generate(apiKey: String, model: String, system: String, contents: JsonArray): String {
+        val models = (listOf(model) + FALLBACKS).distinct().take(4)
+        var last: AiException? = null
+        for ((i, m) in models.withIndex()) {
+            val attempts = if (i == 0) 2 else 1
+            for (a in 0 until attempts) {
+                try {
+                    return generateOnce(apiKey, m, system, contents)
+                } catch (e: AiException) {
+                    last = e
+                    if (!e.transient && !e.modelProblem) throw e
+                    if (e.modelProblem) break
+                    if (a + 1 < attempts) kotlinx.coroutines.delay(1500)
+                }
+            }
+        }
+        val e = last ?: AiException("Gemini no ha respondido.")
+        throw if (e.transient) AiException(e.message + " (He probado con varios modelos.)", e.code) else e
+    }
+
+    private suspend fun generateOnce(apiKey: String, model: String, system: String, contents: JsonArray): String =
         withContext(Dispatchers.IO) {
             val body = buildJsonObject {
                 put("systemInstruction", buildJsonObject {
