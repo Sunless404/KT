@@ -9,6 +9,7 @@ import com.sunless404.keeptrack.data.ProfileStore
 import com.sunless404.keeptrack.data.Repository
 import com.sunless404.keeptrack.data.SampleRoutine
 import com.sunless404.keeptrack.notify.Alarms
+import com.sunless404.keeptrack.update.Updater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +29,8 @@ class App : Application() {
         private set
     lateinit var profile: ProfileStore
         private set
+    lateinit var updater: Updater
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -36,6 +39,7 @@ class App : Application() {
         alarms = Alarms(this)
         secrets = SecretStore(prefs.sp)
         profile = ProfileStore(this, prefs)
+        updater = Updater(this)
         cloud = Cloud(this)
         profile.onChanged = { cloud.pushProfile(it) }
         repo.onChanged = {

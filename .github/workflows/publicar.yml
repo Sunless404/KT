@@ -1,0 +1,70 @@
+# Compila un APK firmado en cada cambio de main y lo publica como Release.
+# La app consulta la última Release al abrirse y ofrece actualizarse.
+name: Publicar versión
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - ".github/workflows/publicar.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Configuración de Firebase y clave de firma
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Falta el secret KEYSTORE_BASE64. Mira el README, apartado Actualizaciones."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/keeptrack.jks"
+          echo "KEYSTORE_FILE=$RUNNER_TEMP/keeptrack.jks" >> "$GITHUB_ENV"
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          else
+            echo "::warning::Sin GOOGLE_SERVICES_JSON: el APK no tendrá funciones de nube."
+          fi
+
+      - name: Pruebas y APK firmado
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "keeptrack-$VERSION_CODE.apk"
+
+      - name: Publicar Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ github.event.head_commit.message }}
+        run: |
+          printf '%s\n' "${NOTES:-Nueva versión}" > notas.txt
+          gh release create "build-$VERSION_CODE" "keeptrack-$VERSION_CODE.apk" \
+            --title "KeepTrack 1.$VERSION_CODE" --notes-file notas.txt --latest

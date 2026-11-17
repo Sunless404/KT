@@ -20,17 +20,34 @@ android {
         applicationId = "com.sunless404.keeptrack"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // En GitHub Actions cada compilación tiene un número mayor (VERSION_CODE);
+        // así la app sabe si hay una versión más nueva publicada.
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = "1.${System.getenv("VERSION_CODE") ?: "0"}"
     }
 
     ksp {
         arg("room.schemaLocation", "$projectDir/schemas")
     }
 
+    // Firma fija para las versiones publicadas. La clave no está en el repo: GitHub
+    // Actions la recibe por secretos (KEYSTORE_FILE, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD).
+    val keystore = System.getenv("KEYSTORE_FILE")?.let { file(it) }?.takeIf { it.exists() }
+    signingConfigs {
+        if (keystore != null) {
+            create("publicada") {
+                storeFile = keystore
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (keystore != null) signingConfig = signingConfigs.getByName("publicada")
         }
     }
     compileOptions {
@@ -55,6 +72,7 @@ android {
         }
     }
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 }

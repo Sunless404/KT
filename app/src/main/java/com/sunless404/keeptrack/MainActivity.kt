@@ -40,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.sunless404.keeptrack.ui.account.AccountPanel
 import com.sunless404.keeptrack.ui.account.AuthScreen
 import com.sunless404.keeptrack.ui.account.ProfileScreen
@@ -55,6 +56,7 @@ import com.sunless404.keeptrack.ui.tasks.TasksScreen
 import com.sunless404.keeptrack.ui.theme.KeepTrackTheme
 import com.sunless404.keeptrack.ui.today.TodayScreen
 import com.sunless404.keeptrack.ui.today.TodayViewModel
+import com.sunless404.keeptrack.update.UpdateDialog
 
 enum class Screen(val label: String, val icon: ImageVector?) {
     HOY("Hoy", KtIcons.Today),
@@ -89,6 +91,7 @@ fun Root() {
             KeepTrackApp(onWantsAccount = { app.prefs.guest = false; guest = false })
         }
     }
+    UpdateDialog()
 }
 
 @Composable
@@ -171,6 +174,8 @@ fun KeepTrackApp(onWantsAccount: () -> Unit) {
                         AiSection()
                         HorizontalDivider(Modifier.padding(vertical = 8.dp))
                         BackupSection()
+                        HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                        VersionSection()
                     }
                 }
             }
@@ -191,5 +196,24 @@ private fun CloudChoiceDialog() {
             text = { AccountPanel("") },
             confirmButton = {},
         )
+    }
+}
+
+/** Versión instalada y botón para buscar actualizaciones a mano. */
+@Composable
+private fun VersionSection() {
+    val app = LocalContext.current.applicationContext as App
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var checked by androidx.compose.runtime.remember { mutableStateOf(false) }
+    Text("Versión", style = MaterialTheme.typography.titleMedium)
+    Text("KeepTrack ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
+    androidx.compose.material3.OutlinedButton(onClick = {
+        scope.launch {
+            app.updater.check(force = true)
+            checked = true
+        }
+    }) { Text("Buscar actualizaciones") }
+    if (checked && app.updater.state.collectAsState().value is com.sunless404.keeptrack.update.UpdateState.Idle) {
+        Text("Tienes la última versión.", style = MaterialTheme.typography.bodySmall)
     }
 }

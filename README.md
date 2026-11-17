@@ -39,6 +39,34 @@ Al actualizar, instala siempre un APK generado en el mismo ordenador: la firma
 de depuración cambia de una máquina a otra y Android rechaza la actualización
 si no coincide. Si ocurre, exporta una copia de seguridad, desinstala e instala.
 
+## Actualizaciones automáticas
+
+Cada cambio que llega a `main` lanza el flujo `.github/workflows/publicar.yml`:
+pasa las pruebas, compila un APK firmado siempre con la misma clave y lo publica
+como Release (`build-N`, versión `1.N`) con el mensaje del commit como novedades.
+
+La app consulta la última Release al abrirse (como mucho cada 30 min). Si hay
+una versión más nueva, muestra «Nueva versión disponible» con las novedades;
+«Actualizar» la descarga y abre el instalador de Android. La primera vez Android
+pide permitir a KeepTrack instalar aplicaciones. Los datos se conservan.
+En Perfil > Ajustes > Versión se puede buscar a mano.
+
+Secrets necesarios en GitHub (Settings > Secrets and variables > Actions):
+
+| Secret | Contenido |
+|---|---|
+| `KEYSTORE_BASE64` | La clave de firma (`.jks`) en base64 |
+| `KEYSTORE_PASSWORD` | Contraseña de la clave |
+| `KEY_ALIAS` | `keeptrack` |
+| `KEY_PASSWORD` | Contraseña de la clave (la misma) |
+| `GOOGLE_SERVICES_JSON` | Contenido de `google-services.json` |
+
+La clave de firma no está en el repositorio. Guárdala bien: si se pierde, las
+versiones nuevas no podrán actualizar las ya instaladas.
+
+Un APK compilado en otro ordenador (`assembleDebug`) va firmado con otra clave y
+no puede actualizar al publicado, ni al revés.
+
 ## Primer arranque
 
 1. Al abrir la app puedes entrar con tu cuenta, crear una o seguir como invitado
