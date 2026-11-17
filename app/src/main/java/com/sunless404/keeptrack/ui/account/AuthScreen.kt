@@ -90,9 +90,6 @@ fun AuthScreen(onGuest: () -> Unit) {
             Brush.verticalGradient(listOf(Brand.Slate, MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background))
         ).windowInsetsPadding(WindowInsets.safeDrawing),
     ) {
-        TextButton(onClick = onGuest, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).appear(6)) {
-            Text("Entrar como invitado")
-        }
         Column(
             Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -148,6 +145,11 @@ fun AuthScreen(onGuest: () -> Unit) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.appear(4).padding(bottom = 24.dp),
             )
+        }
+        // Va después del formulario para quedar por encima: si no, el área desplazable
+        // del formulario se queda con los toques y el botón no responde.
+        TextButton(onClick = onGuest, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).appear(6)) {
+            Text("Entrar como invitado")
         }
     }
 }
