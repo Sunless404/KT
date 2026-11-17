@@ -354,4 +354,95 @@ class RoutineParserTest {
         // Noche del lunes: 8 h + 30 min del bloque que empieza el martes de madrugada.
         assertEquals(510, a.sleepByNight[1])
     }
+
+    // ---------- Frases, CSV, cuadrículas y respuestas de IA ----------
+
+    @Test
+    fun phrases() {
+        val r = parse(
+            """
+            Estudio de lunes a viernes de 8 a 10
+            Gimnasio martes y jueves a las 18:00 durante 1h30
+            Leer todos los días 30 min a las 23:00
+            De 17:00 a 18:30 clases de inglés los miércoles
+            Fútbol los sábados de 5 a 7 de la tarde
+            """
+        )
+        assertTrue(r.errors.toString(), r.errors.isEmpty())
+        val byTitle = r.blocks.groupBy { it.title }
+        assertEquals(setOf("Estudio", "Gimnasio", "Leer", "Clases de inglés", "Fútbol"), byTitle.keys)
+        assertEquals((1..5).toList(), byTitle.getValue("Estudio").map { it.dayOfWeek })
+        assertEquals("08:00-10:00", byTitle.getValue("Estudio")[0].range())
+        assertEquals(listOf(2, 4), byTitle.getValue("Gimnasio").map { it.dayOfWeek })
+        assertEquals("18:00-19:30", byTitle.getValue("Gimnasio")[0].range())
+        assertEquals(Category.GIMNASIO, byTitle.getValue("Gimnasio")[0].category)
+        assertEquals(7, byTitle.getValue("Leer").size)
+        assertEquals("23:00-23:30", byTitle.getValue("Leer")[0].range())
+        assertEquals(Category.LECTURA, byTitle.getValue("Leer")[0].category)
+        assertEquals(listOf(3), byTitle.getValue("Clases de inglés").map { it.dayOfWeek })
+        assertEquals("17:00-18:30", byTitle.getValue("Clases de inglés")[0].range())
+        assertEquals("17:00-19:00", byTitle.getValue("Fútbol")[0].range())
+        assertEquals(listOf(6), byTitle.getValue("Fútbol").map { it.dayOfWeek })
+    }
+
+    @Test
+    fun phraseUnderDayHeader() {
+        val r = parse(
+            """
+            Lunes
+            Piano de 18 a 19
+            """
+        )
+        assertTrue(r.errors.toString(), r.errors.isEmpty())
+        assertEquals(1, r.blocks.single().dayOfWeek)
+        assertEquals("Piano", r.blocks.single().title)
+    }
+
+    @Test
+    fun csvFromSpreadsheet() {
+        val r = parse(
+            """
+            Día;Inicio;Fin;Actividad;Categoría
+            Lunes a viernes;08:00;14:00;Clases;clase
+            Martes;18:00;19:30;"Gimnasio; piernas";gym
+            Sábado;10:00;12:00;Estudio;
+            """
+        )
+        assertTrue(r.errors.toString(), r.errors.isEmpty())
+        assertEquals(7, r.blocks.size)
+        val gym = r.blocks.single { it.dayOfWeek == 2 && it.category == Category.GIMNASIO }
+        assertEquals("Gimnasio; piernas", gym.title)
+        assertEquals("18:00-19:30", gym.range())
+    }
+
+    @Test
+    fun timetableGrid() {
+        val r = parse(
+            """
+            Hora,Lunes,Martes,Miércoles
+            08:00-09:00,Matemáticas,Inglés,
+            09:00-10:00,Historia,-,Física
+            """
+        )
+        assertTrue(r.errors.toString(), r.errors.isEmpty())
+        assertEquals(4, r.blocks.size)
+        assertEquals("Inglés", r.blocks.single { it.dayOfWeek == 2 }.title)
+        assertEquals("09:00-10:00", r.blocks.single { it.dayOfWeek == 3 }.range())
+    }
+
+    @Test
+    fun aiAnswerWithTextAroundJson() {
+        val r = parse(
+            """
+            ¡Claro! Aquí tienes tu rutina:
+
+            ```json
+            {"bloques": [{"titulo": "Correr", "dias": ["lunes"], "inicio": "07:00", "fin": "07:45"}]}
+            ```
+            Espero que te sirva.
+            """
+        )
+        assertEquals(ImportFormat.JSON, r.format)
+        assertEquals("Correr", r.blocks.single().title)
+    }
 }

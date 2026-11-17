@@ -29,6 +29,17 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Rutinas compartidas desde otras apps (texto de una IA, un CSV…). -->
+            <intent-filter android:label="Importar a KeepTrack">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
+            <intent-filter android:label="Importar a KeepTrack">
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/json" />
+            </intent-filter>
         </activity>
 
         <!-- Fotos de la cámara para el asistente (se guardan en la caché de la app). -->

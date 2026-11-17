@@ -28,6 +28,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,7 +75,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) com.sunless404.keeptrack.ui.edit.SharedImport.receive(this, intent)
         setContent { KeepTrackTheme { Root() } }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        com.sunless404.keeptrack.ui.edit.SharedImport.receive(this, intent)
     }
 }
 
@@ -107,6 +114,9 @@ fun KeepTrackApp(onWantsAccount: () -> Unit) {
     }
     val todayVm: TodayViewModel = viewModel()
     val tabs = Screen.entries.filter { it.icon != null }
+    // Algo compartido desde otra app: se abre Rutina para importarlo.
+    val shared by com.sunless404.keeptrack.ui.edit.SharedImport.text.collectAsState()
+    LaunchedEffect(shared) { if (shared != null) go(Screen.RUTINA) }
 
     BackHandler(enabled = screen != Screen.HOY) {
         screen = when (screen) {

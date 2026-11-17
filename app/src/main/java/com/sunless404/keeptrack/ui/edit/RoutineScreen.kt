@@ -46,6 +46,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,6 +82,15 @@ fun RoutineScreen(vm: EditViewModel, onOpenProfile: () -> Unit) {
     var editing by remember { mutableStateOf<Block?>(null) }
     var copyFrom by remember { mutableStateOf<Int?>(null) }
     var toDelete by remember { mutableStateOf<Block?>(null) }
+    var importMenu by remember { mutableStateOf(false) }
+    val shared by SharedImport.text.collectAsStateWithLifecycle()
+    val undo by vm.importUndo.collectAsStateWithLifecycle()
+    LaunchedEffect(undo) {
+        if (undo != null) {
+            kotlinx.coroutines.delay(12_000)
+            vm.importUndo.value = null
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
@@ -89,8 +99,29 @@ fun RoutineScreen(vm: EditViewModel, onOpenProfile: () -> Unit) {
     ) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                ImportButton { importMenu = true }
                 Spacer(Modifier.weight(1f))
                 TopActions("Rutina", HelpTexts.ROUTINE, onOpenProfile)
+            }
+        }
+        item {
+            AnimatedVisibility(visible = undo != null, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                val u = undo
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = MaterialTheme.shapes.large,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Rutina importada · ${u?.count ?: 0} bloques",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { vm.undoImport() }) { Text("Deshacer") }
+                    }
+                }
             }
         }
         items((1..7).toList(), key = { it }) { day ->
@@ -117,6 +148,15 @@ fun RoutineScreen(vm: EditViewModel, onOpenProfile: () -> Unit) {
             )
         }
     }
+
+    ImportFlow(
+        current = blocks,
+        menuOpen = importMenu,
+        sharedText = shared,
+        onCloseMenu = { importMenu = false },
+        onSharedConsumed = { SharedImport.text.value = null },
+        onApply = { list, mode -> vm.applyImport(list, mode) },
+    )
 
     editing?.let { b ->
         BlockEditorDialog(b, blocks, onDismiss = { editing = null }) { block, days ->

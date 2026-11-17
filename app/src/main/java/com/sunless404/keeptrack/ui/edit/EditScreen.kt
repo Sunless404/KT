@@ -83,6 +83,26 @@ class EditViewModel(app: Application) : AndroidViewModel(app) {
     fun delete(id: Long) = viewModelScope.launch { repo.deleteBlock(id) }
     fun duplicate(id: Long) = viewModelScope.launch { repo.duplicateBlock(id) }
     fun copyDay(from: Int, to: Int) = viewModelScope.launch { repo.copyDay(from, to) }
+
+    /** Rutina anterior a la última importación, para poder deshacerla. */
+    data class ImportUndo(val count: Int, val before: List<Block>)
+    val importUndo = kotlinx.coroutines.flow.MutableStateFlow<ImportUndo?>(null)
+
+    fun applyImport(blocks: List<Block>, mode: ImportMode) = viewModelScope.launch {
+        val before = repo.allBlocks()
+        when (mode) {
+            ImportMode.REPLACE_ALL -> repo.replaceTemplate(blocks)
+            ImportMode.REPLACE_DAYS -> repo.replaceTemplate(blocks, blocks.map { it.dayOfWeek }.toSet())
+            ImportMode.ADD -> repo.mergeTemplate(blocks)
+        }
+        importUndo.value = ImportUndo(blocks.size, before)
+    }
+
+    fun undoImport() = viewModelScope.launch {
+        val u = importUndo.value ?: return@launch
+        importUndo.value = null
+        repo.replaceTemplate(u.before)
+    }
 }
 
 @Composable

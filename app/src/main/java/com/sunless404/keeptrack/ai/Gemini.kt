@@ -107,6 +107,12 @@ object Gemini {
         )
     }
 
+    /** Modelos que han rechazado el ajuste de razonamiento en esta sesión. */
+    private val noFast = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** Solo los Flash 2.5 aceptan seguro que se desactive el razonamiento. */
+    private fun usesFastConfig(model: String) = model.contains("2.5-flash") && model !in noFast
+
     /** Modelos gratuitos de reserva, por si el elegido está saturado o no responde. */
     private val FALLBACKS = listOf("gemini-flash-latest", "gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash")
 
@@ -127,9 +133,12 @@ object Gemini {
                     return try {
                         generateOnce(apiKey, m, system, contents, fast = true)
                     } catch (e: AiException) {
-                        // Algunos modelos no aceptan desactivar el razonamiento: se repite sin pedirlo.
-                        if (e.code == 400 && e.message.orEmpty().contains("think", ignoreCase = true)) generateOnce(apiKey, m, system, contents, fast = false)
-                        else throw e
+                        // Algunos modelos no aceptan desactivar el razonamiento ("invalid argument"):
+                        // se repite sin pedirlo y se recuerda para no volver a intentarlo con ese modelo.
+                        if (e.code == 400 && usesFastConfig(m)) {
+                            noFast += m
+                            generateOnce(apiKey, m, system, contents, fast = false)
+                        } else throw e
                     }
                 } catch (e: AiException) {
                     last = e
@@ -157,7 +166,7 @@ object Gemini {
                 put("generationConfig", buildJsonObject {
                     put("responseMimeType", "application/json")
                     put("temperature", 0.3)
-                    if (fast && model.contains("flash") && !model.contains("2.0")) {
+                    if (fast && usesFastConfig(model)) {
                         put("thinkingConfig", buildJsonObject { put("thinkingBudget", 0) })
                     }
                 })
