@@ -124,7 +124,13 @@ object Gemini {
             val attempts = if (i == 0) 2 else 1
             for (a in 0 until attempts) {
                 try {
-                    return generateOnce(apiKey, m, system, contents)
+                    return try {
+                        generateOnce(apiKey, m, system, contents, fast = true)
+                    } catch (e: AiException) {
+                        // Algunos modelos no aceptan desactivar el razonamiento: se repite sin pedirlo.
+                        if (e.code == 400 && e.message.orEmpty().contains("think", ignoreCase = true)) generateOnce(apiKey, m, system, contents, fast = false)
+                        else throw e
+                    }
                 } catch (e: AiException) {
                     last = e
                     if (!e.transient && !e.modelProblem) throw e
@@ -137,7 +143,11 @@ object Gemini {
         throw if (e.transient) AiException(e.message + " (He probado con varios modelos.)", e.code) else e
     }
 
-    private suspend fun generateOnce(apiKey: String, model: String, system: String, contents: JsonArray): String =
+    /**
+     * [fast]: en los modelos Flash se desactiva el "razonamiento" previo, que para esta tarea
+     * apenas mejora la respuesta y la hace bastante más lenta (era la causa de muchos tiempos de espera).
+     */
+    private suspend fun generateOnce(apiKey: String, model: String, system: String, contents: JsonArray, fast: Boolean): String =
         withContext(Dispatchers.IO) {
             val body = buildJsonObject {
                 put("systemInstruction", buildJsonObject {
@@ -147,6 +157,9 @@ object Gemini {
                 put("generationConfig", buildJsonObject {
                     put("responseMimeType", "application/json")
                     put("temperature", 0.3)
+                    if (fast && model.contains("flash") && !model.contains("2.0")) {
+                        put("thinkingConfig", buildJsonObject { put("thinkingBudget", 0) })
+                    }
                 })
             }
             val res = request("models/$model:generateContent", apiKey, body.toString())
