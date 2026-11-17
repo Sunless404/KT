@@ -47,6 +47,8 @@ class FrameStyle(
     val frontImages: ImagePainter? = null,
     /** Tamaño del lienzo respecto a la foto. */
     val scale: Float = 1.7f,
+    /** Duración de un ciclo de animación, en ms. */
+    val period: Int = 4000,
 )
 
 /** Foto de perfil con su marco animado. El marco ocupa un 70 % más que la foto (para alas y remates). */
@@ -57,7 +59,7 @@ fun FramedAvatar(photo: ByteArray?, name: String, size: Dp, frame: FrameStyle?, 
         return
     }
     val t by rememberInfiniteTransition(label = "marco").animateFloat(
-        0f, 1f, infiniteRepeatable(tween(4000, easing = LinearEasing)), label = "t",
+        0f, 1f, infiniteRepeatable(tween(frame.period, easing = LinearEasing)), label = "t",
     )
     val images = frame.images.map { ImageBitmap.imageResource(it) }
     Box(modifier.size(size * frame.scale), contentAlignment = Alignment.Center) {

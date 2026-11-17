@@ -98,8 +98,9 @@ class FramePreviewTest {
         com.sunless404.keeptrack.ui.cosmetics.ImageFrames.all.forEachIndexed { i, f ->
             idx = i
             rule.mainClock.advanceTimeByFrame()
-            for (k in 0 until 40) {
-                rule.mainClock.advanceTimeBy(100)
+            val n = maxOf(40, f.period / 120)
+            for (k in 0 until n) {
+                rule.mainClock.advanceTimeBy(f.period.toLong() / n)
                 rule.onRoot().captureRoboImage("build/marcos/${f.id}-$k.png")
             }
         }

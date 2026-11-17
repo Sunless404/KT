@@ -27,20 +27,39 @@ typealias ImagePainter = DrawScope.(t: Float, c: Offset, r: Float, img: List<Ima
 internal fun DrawScope.piece(
     img: ImageBitmap, ax: Float, ay: Float, at: Offset, width: Float,
     degrees: Float = 0f, flip: Boolean = false, alpha: Float = 1f, blend: BlendMode = BlendMode.SrcOver,
+    src: IntOffset = IntOffset.Zero, srcSize: IntSize = IntSize(img.width, img.height),
 ) {
     val w = width.roundToInt()
-    val h = (width * img.height / img.width).roundToInt()
+    val h = (width * srcSize.height / srcSize.width).roundToInt()
     translate(at.x, at.y) {
         rotate(degrees, Offset.Zero) {
             scale(if (flip) -1f else 1f, 1f, Offset.Zero) {
                 drawImage(
-                    img, IntOffset.Zero, IntSize(img.width, img.height),
+                    img, src, srcSize,
                     IntOffset((-ax * w).roundToInt(), (-ay * h).roundToInt()), IntSize(w, h),
                     alpha = alpha, blendMode = blend, filterQuality = FilterQuality.High,
                 )
             }
         }
     }
+}
+
+/**
+ * Hoja de fotogramas cuadrados ([frames] en [cols] columnas) que se reproduce en bucle según
+ * [phase] (0..1), fundiendo cada fotograma con el siguiente para que el movimiento sea suave.
+ */
+internal fun DrawScope.flipbook(sheet: ImageBitmap, frames: Int, cols: Int, phase: Float, c: Offset, width: Float, alpha: Float = 1f) {
+    val size = sheet.width / cols
+    val pos = frac(phase) * frames
+    val i = pos.toInt() % frames
+    val mix = pos - pos.toInt()
+    fun frame(k: Int, a: Float) {
+        if (a <= 0.01f) return
+        piece(sheet, 0.5f, 0.5f, c, width, alpha = a * alpha,
+            src = IntOffset((k % cols) * size, (k / cols) * size), srcSize = IntSize(size, size))
+    }
+    frame(i, 1f - mix)
+    frame((i + 1) % frames, mix)
 }
 
 /** Marcos hechos con piezas ilustradas y animadas por código. */
@@ -105,43 +124,39 @@ object ImageFrames {
     private val SPECTRAL_PURPLE = Color(0xFF9A4DFF)
     private val SPECTRAL_LILAC = Color(0xFFE2C4FF)
 
-    /** Susanoo azul: armadura de placas con llamas que suben y un latido de energía. */
+    /** Susanoo azul: la armadura gira sobre su eje y las llamas ondean sin parar. */
     val susanooBlue = FrameStyle(
         id = "susanoo_azul", name = "Susanoo azul", collection = "Susanoo",
-        accent = SPECTRAL_BLUE, scale = 2.4f,
-        images = listOf(R.drawable.frame_susanoo_blue, R.drawable.frame_susanoo_blue_glow),
-        backImages = { t, c, r, _ ->
-            bloom(c, r * 2.2f, SPECTRAL_BLUE, 0.3f + 0.1f * sin(t * TAU))
-            fire(c, r * 1.85f, t, SPECTRAL_BLUE.copy(alpha = 0.45f), SPECTRAL_BLUE.copy(alpha = 0.35f), SPECTRAL_CYAN.copy(alpha = 0.3f),
-                count = 22, len = r * 0.4f, speed = 1.2f)
+        accent = SPECTRAL_BLUE, scale = 2.4f, period = 12000,
+        images = listOf(R.drawable.frame_susanoo_blue_armor, R.drawable.frame_susanoo_blue_glow, R.drawable.frame_susanoo_blue_flames),
+        backImages = { t, c, r, img ->
+            bloom(c, r * 2.2f, SPECTRAL_BLUE, 0.3f + 0.1f * sin(t * TAU * 3))
+            fire(c, r * 1.85f, t, SPECTRAL_BLUE.copy(alpha = 0.5f), SPECTRAL_BLUE.copy(alpha = 0.4f), SPECTRAL_CYAN.copy(alpha = 0.35f),
+                count = 26, len = r * 0.45f, speed = 4f)
+            flipbook(img[2], 16, 4, t * 7, c, 2 * r * 0.98f / SUSANOO_BLUE_HOLE)
         },
         frontImages = { t, c, r, img ->
-            val ph = t * TAU
-            val breathe = 1f + 0.012f * sin(ph * 2)
-            ringImage(img[0], c, r, SUSANOO_BLUE_HOLE, grow = breathe)
-            ringImage(img[1], c, r, SUSANOO_BLUE_HOLE, grow = breathe, alpha = 0.25f + 0.35f * (0.5f + 0.5f * sin(ph * 2)), blend = BlendMode.Plus)
-            embers(Offset(c.x, c.y + r * 0.5f), r * 1.9f, t, 16, SPECTRAL_CYAN.copy(alpha = 0.9f), size = r * 0.022f, height = r * 1.7f)
+            val rot = t * 360f
+            ringImage(img[0], c, r, SUSANOO_BLUE_HOLE, degrees = rot)
+            ringImage(img[1], c, r, SUSANOO_BLUE_HOLE, degrees = rot, alpha = 0.2f + 0.3f * (0.5f + 0.5f * sin(t * TAU * 6)), blend = BlendMode.Plus)
+            embers(Offset(c.x, c.y + r * 0.5f), r * 1.9f, frac(t * 3), 16, SPECTRAL_CYAN.copy(alpha = 0.9f), size = r * 0.022f, height = r * 1.7f)
         },
     )
 
-    /** Susanoo morado: costillas espectrales que respiran y llamas violetas. */
+    /** Susanoo morado: costillas quietas y llamas violetas vivas alrededor. */
     val susanooPurple = FrameStyle(
         id = "susanoo_morado", name = "Susanoo morado", collection = "Susanoo",
         accent = SPECTRAL_PURPLE, scale = 2.3f,
-        images = listOf(R.drawable.frame_susanoo_purple, R.drawable.frame_susanoo_purple_glow),
-        backImages = { t, c, r, _ ->
+        images = listOf(R.drawable.frame_susanoo_purple_armor, R.drawable.frame_susanoo_purple_glow, R.drawable.frame_susanoo_purple_flames),
+        backImages = { t, c, r, img ->
             bloom(c, r * 2.1f, SPECTRAL_PURPLE, 0.3f + 0.12f * sin(t * TAU))
-            fire(c, r * 1.6f, t, SPECTRAL_PURPLE.copy(alpha = 0.4f), SPECTRAL_PURPLE.copy(alpha = 0.3f), SPECTRAL_LILAC.copy(alpha = 0.25f),
-                count = 20, len = r * 0.45f, speed = 1.3f, from = PI_F * 1.05f, to = PI_F * 1.95f)
+            fire(c, r * 1.55f, t, SPECTRAL_PURPLE.copy(alpha = 0.45f), SPECTRAL_PURPLE.copy(alpha = 0.35f), SPECTRAL_LILAC.copy(alpha = 0.3f),
+                count = 22, len = r * 0.5f, speed = 1.6f, from = PI_F * 1.05f, to = PI_F * 1.95f)
+            flipbook(img[2], 16, 4, t * 2, c, 2 * r * 0.98f / SUSANOO_PURPLE_HOLE)
         },
         frontImages = { t, c, r, img ->
-            val ph = t * TAU
-            // Respiración: el anillo se ensancha un poco a lo ancho, como un tórax.
-            val b = 0.5f + 0.5f * sin(ph * 1.5f)
-            scale(1f + 0.02f * b, 1f + 0.008f * b, c) {
-                ringImage(img[0], c, r, SUSANOO_PURPLE_HOLE)
-                ringImage(img[1], c, r, SUSANOO_PURPLE_HOLE, alpha = 0.2f + 0.45f * b, blend = BlendMode.Plus)
-            }
+            ringImage(img[0], c, r, SUSANOO_PURPLE_HOLE)
+            ringImage(img[1], c, r, SUSANOO_PURPLE_HOLE, alpha = 0.2f + 0.35f * (0.5f + 0.5f * sin(t * TAU * 2)), blend = BlendMode.Plus)
             embers(Offset(c.x, c.y + r * 0.5f), r * 1.7f, t, 16, SPECTRAL_LILAC.copy(alpha = 0.9f), size = r * 0.022f, height = r * 1.6f)
         },
     )
