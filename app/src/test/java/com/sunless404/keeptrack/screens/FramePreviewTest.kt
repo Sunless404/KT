@@ -38,6 +38,7 @@ class FramePreviewTest {
     val rule = createComposeRule()
 
     @Test
+    @Config(qualifiers = "w460dp-h330dp-night-xxhdpi")
     fun marcos() {
         var idx by androidx.compose.runtime.mutableIntStateOf(0)
         rule.mainClock.autoAdvance = false
@@ -45,25 +46,21 @@ class FramePreviewTest {
             KeepTrackTheme {
                 val set = Frames.all[idx]
                 Column(
-                    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(12.dp),
+                    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(set.first().collection, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
-                    Spacer(Modifier.height(8.dp))
-                    set.chunked(2).forEachIndexed { row, pair ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                            pair.forEachIndexed { col, f ->
-                                Column(Modifier.width(160.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    FramedAvatar(null, "K", 100.dp, f)
-                                    Text(
-                                        "${"ABCD"[row * 2 + col]} · ${f.name}",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onBackground,
-                                    )
-                                }
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        set.forEachIndexed { i, f ->
+                            Column(Modifier.width(220.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                FramedAvatar(null, "K", 120.dp, f)
+                                Text(
+                                    "${"ABCD"[i]} · ${f.name}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                )
                             }
                         }
-                        Spacer(Modifier.height(10.dp))
                     }
                 }
             }
@@ -71,8 +68,8 @@ class FramePreviewTest {
         Frames.all.forEachIndexed { i, set ->
             idx = i
             rule.mainClock.advanceTimeByFrame()
-            for (f in 0 until 20) {
-                rule.mainClock.advanceTimeBy(200)
+            for (f in 0 until 30) {
+                rule.mainClock.advanceTimeBy(133)
                 rule.onRoot().captureRoboImage("build/marcos/${set.first().id.substringBefore('_')}-$f.png")
             }
         }
@@ -94,7 +91,7 @@ class FramePreviewTest {
                             row.forEach { d ->
                                 Column(Modifier.width(80.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                     com.sunless404.keeptrack.ui.stats.StreakFlame(d, 72.dp)
-                                    Text("$d días", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onBackground)
+                                    Text(if (d == 1) "1 día" else "$d días", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onBackground)
                                 }
                             }
                         }
@@ -103,8 +100,8 @@ class FramePreviewTest {
                 }
             }
         }
-        for (f in 0 until 20) {
-            rule.mainClock.advanceTimeBy(120)
+        for (f in 0 until 30) {
+            rule.mainClock.advanceTimeBy(100)
             rule.onRoot().captureRoboImage("build/marcos/llamas-$f.png")
         }
     }

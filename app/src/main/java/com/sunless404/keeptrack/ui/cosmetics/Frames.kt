@@ -39,7 +39,7 @@ class FrameStyle(
     val front: FramePainter = { _, _, _ -> },
 )
 
-/** Foto de perfil con su marco animado. El marco ocupa un 45 % más que la foto. */
+/** Foto de perfil con su marco animado. El marco ocupa un 70 % más que la foto (para alas y remates). */
 @Composable
 fun FramedAvatar(photo: ByteArray?, name: String, size: Dp, frame: FrameStyle?, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     if (frame == null) {
@@ -49,7 +49,7 @@ fun FramedAvatar(photo: ByteArray?, name: String, size: Dp, frame: FrameStyle?, 
     val t by rememberInfiniteTransition(label = "marco").animateFloat(
         0f, 1f, infiniteRepeatable(tween(4000, easing = LinearEasing)), label = "t",
     )
-    Box(modifier.size(size * 1.45f), contentAlignment = Alignment.Center) {
+    Box(modifier.size(size * 1.7f), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) { frame.back(this, t, center, size.toPx() / 2) }
         Avatar(photo, name, size, onClick = onClick)
         Canvas(Modifier.fillMaxSize()) { frame.front(this, t, center, size.toPx() / 2) }
