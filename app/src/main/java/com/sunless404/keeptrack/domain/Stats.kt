@@ -14,7 +14,7 @@ enum class Habit(val label: String, val category: Category) {
     ESTUDIO("Estudio", Category.ESTUDIO),
     GIMNASIO("Gimnasio", Category.GIMNASIO),
     LECTURA("Lectura", Category.LECTURA),
-    SUENO("Sueño a su hora", Category.SUENO),
+    SUENO("Sueño", Category.SUENO),
 }
 
 data class Streak(val habit: Habit, val current: Int, val best: Int)

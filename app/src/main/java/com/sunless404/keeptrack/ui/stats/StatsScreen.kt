@@ -161,7 +161,7 @@ fun StatsScreen(vm: StatsViewModel, onOpenGym: () -> Unit, onOpenProfile: () -> 
         }
         item {
             Text(
-                "Festivos, días libres y días sin ese bloque no cuentan. Sueño a su hora: marcado ±${Stats.SLEEP_TOLERANCE_MIN} min de su inicio.",
+                "Festivos, días libres y días sin ese bloque no cuentan. Sueño: cuenta si lo marcas a ±${Stats.SLEEP_TOLERANCE_MIN} min de su inicio.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp),

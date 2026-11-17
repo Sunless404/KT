@@ -8,6 +8,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.sunless404.keeptrack.ui.common.HelpTexts
 import com.sunless404.keeptrack.ui.common.TopActions
@@ -105,7 +106,7 @@ private val ChatText = TextStyle(fontSize = 15.sp, lineHeight = 23.sp)
 private val SUGGESTIONS = listOf(
     "Crea una rutina para estudiar 3 h al día entre semana",
     "Pasa el gimnasio a martes y jueves a las 19:00",
-    "Añade una tarea: dentista el viernes a las 17:00 y avísame media hora antes",
+    "Apunta dentista el viernes a las 17:00 y avísame antes",
     "¿Cuántas horas de estudio tengo a la semana?",
 )
 
@@ -257,12 +258,12 @@ internal fun Welcome(onPick: (String) -> Unit) {
                         onClick = { onPick(text) },
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                         shape = MaterialTheme.shapes.large,
-                        modifier = Modifier.weight(1f).heightIn(min = 124.dp).appear(3 + i),
+                        modifier = Modifier.weight(1f).height(132.dp).appear(3 + i),
                     ) {
                         Column(Modifier.padding(14.dp)) {
                             Icon(SUGGESTION_ICONS[i], null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.secondary)
                             Spacer(Modifier.height(10.dp))
-                            Text(text, style = MaterialTheme.typography.bodyMedium)
+                            Text(text, style = MaterialTheme.typography.bodyMedium, maxLines = 4, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
