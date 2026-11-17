@@ -16,7 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -39,6 +41,12 @@ class FrameStyle(
     val front: FramePainter = { _, _, _ -> },
     /** Color del brillo interior que tiñe el borde de la foto (transparente = sin brillo). */
     val accent: Color = Color.Transparent,
+    /** Imágenes del marco (drawables); se pasan cargadas a [backImages] y [frontImages]. */
+    val images: List<Int> = emptyList(),
+    val backImages: ImagePainter? = null,
+    val frontImages: ImagePainter? = null,
+    /** Tamaño del lienzo respecto a la foto. */
+    val scale: Float = 1.7f,
 )
 
 /** Foto de perfil con su marco animado. El marco ocupa un 70 % más que la foto (para alas y remates). */
@@ -51,8 +59,12 @@ fun FramedAvatar(photo: ByteArray?, name: String, size: Dp, frame: FrameStyle?, 
     val t by rememberInfiniteTransition(label = "marco").animateFloat(
         0f, 1f, infiniteRepeatable(tween(4000, easing = LinearEasing)), label = "t",
     )
-    Box(modifier.size(size * 1.7f), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) { frame.back(this, t, center, size.toPx() / 2) }
+    val images = frame.images.map { ImageBitmap.imageResource(it) }
+    Box(modifier.size(size * frame.scale), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            frame.back(this, t, center, size.toPx() / 2)
+            frame.backImages?.invoke(this, t, center, size.toPx() / 2, images)
+        }
         Avatar(photo, name, size, onClick = onClick)
         Canvas(Modifier.fillMaxSize()) {
             val r = size.toPx() / 2
@@ -68,6 +80,7 @@ fun FramedAvatar(photo: ByteArray?, name: String, size: Dp, frame: FrameStyle?, 
                 )
             }
             frame.front(this, t, center, r)
+            frame.frontImages?.invoke(this, t, center, r, images)
         }
     }
 }

@@ -76,6 +76,27 @@ class FramePreviewTest {
     }
 
     @Test
+    @Config(qualifiers = "w460dp-h400dp-night-xxhdpi")
+    fun ilustrado() {
+        rule.mainClock.autoAdvance = false
+        rule.setContent {
+            KeepTrackTheme {
+                Row(
+                    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                    horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FramedAvatar(null, "K", 130.dp, com.sunless404.keeptrack.ui.cosmetics.ImageFrames.alucardNoble)
+                    FramedAvatar(null, "K", 56.dp, com.sunless404.keeptrack.ui.cosmetics.ImageFrames.alucardNoble)
+                }
+            }
+        }
+        for (f in 0 until 40) {
+            rule.mainClock.advanceTimeBy(100)
+            rule.onRoot().captureRoboImage("build/marcos/ilustrado-$f.png")
+        }
+    }
+
+    @Test
     fun llamas() {
         rule.mainClock.autoAdvance = false
         rule.setContent {
