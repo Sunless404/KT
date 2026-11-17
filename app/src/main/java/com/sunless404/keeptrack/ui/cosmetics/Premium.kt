@@ -37,6 +37,7 @@ object Frames {
 
     /** El que te gustó: se queda igual. */
     private val alucardSeal = FrameStyle("alucard_c", "Sello Cromwell", "Alucard",
+        accent = BLOOD,
         back = { t, c, r -> glow(c, r * 1.5f, BLOOD, 0.35f + 0.15f * tri(t * 2)) },
         front = { t, c, r ->
             rotate(t * 360f / 2, c) {
@@ -58,13 +59,14 @@ object Frames {
         })
 
     private val alucardCount = FrameStyle("alucard_count", "Conde no muerto", "Alucard",
+        accent = BLOOD_HOT,
         back = { t, c, r ->
             smoke(c, r * 1.05f, t, Color.Black.copy(alpha = 0.85f), n = 20, reach = r * 0.45f, speed = 0.3f)
             bloom(c, r * 1.6f, BLOOD, 0.3f + 0.1f * tri(t * 2))
             // Alas de murciélago a los lados.
             val flap = tri(t * 2)
-            batWing(Offset(c.x - r * 0.95f, c.y - r * 0.05f), -1f, r * 0.72f, c(0xFF1A0508), c(0xFF5C0E18), flap)
-            batWing(Offset(c.x + r * 0.95f, c.y - r * 0.05f), 1f, r * 0.72f, c(0xFF1A0508), c(0xFF5C0E18), flap)
+            batWing(Offset(c.x - r * 0.95f, c.y - r * 0.1f), -1f, r * 0.82f, c(0xFF1A0508), c(0xFF5C0E18), flap)
+            batWing(Offset(c.x + r * 0.95f, c.y - r * 0.1f), 1f, r * 0.82f, c(0xFF1A0508), c(0xFF5C0E18), flap)
         },
         front = { t, c, r ->
             // Anillo de obsidiana con pinchos góticos.
@@ -129,30 +131,44 @@ object Frames {
     }
 
     private val amaterasuFlames = FrameStyle("amaterasu_flames", "Amaterasu", "Amaterasu",
+        accent = SHARINGAN,
         back = { t, c, r ->
-            bloom(c, r * 1.65f, CRIMSON, 0.4f)
-            // Fuego negro denso y lento que sube por los lados (borde carmesí).
-            fire(c, r * 1.05f, t, c(0xFFB0142A).copy(alpha = 0.9f), c(0xFF5A0A14), c(0xFF2A0508),
-                count = 16, len = r * 0.62f, speed = 0.6f, from = PI_F * 0.05f, to = PI_F * 0.95f + PI_F)
-            fire(c, r * 1.05f, t + 0.1f, INK, INK, c(0xFF1A060A), count = 16, len = r * 0.52f, speed = 0.6f, additive = false,
-                from = PI_F * 0.05f, to = PI_F * 0.95f + PI_F)
-            sparks(c, r, t, c(0xFFFF4A2A), n = 10, speed = 0.45f, size = 1.8f)
+            // Resplandor carmesí detrás para que el fuego negro se recorte.
+            drawCircle(Brush.radialGradient(listOf(c(0xFFB0142A).copy(alpha = 0.75f), CRIMSON.copy(alpha = 0.45f), Color.Transparent), c, r * 1.7f), r * 1.7f, c)
+            // Fuego negro alto en la mitad superior (lento y espeso), con filo carmesí.
+            fire(c, r * 1.08f, t, c(0xFFFF3B4A), c(0xFFB0142A), c(0xFF5A0A14), count = 18, len = r * 0.72f, speed = 0.55f,
+                from = PI_F * 0.95f, to = PI_F * 2.05f, width = 0.16f)
+            fire(c, r * 1.08f, t + 0.08f, INK, INK, c(0xFF14040A), count = 18, len = r * 0.62f, speed = 0.55f, additive = false,
+                from = PI_F * 0.95f, to = PI_F * 2.05f, width = 0.15f)
+            // Llamas más bajas abajo.
+            fire(c, r * 1.08f, t + 0.3f, INK, INK, c(0xFF14040A), count = 12, len = r * 0.3f, speed = 0.7f, additive = false,
+                from = PI_F * 0.05f, to = PI_F * 0.95f, width = 0.14f)
+            sparks(c, r * 1.05f, t, c(0xFFFF4A2A), n = 14, speed = 0.45f, size = 2f)
         },
         front = { t, c, r ->
-            bevelRing(c, r * 1.0f, r * 1.13f, c(0xFF1A1A22), c(0xFF5A5A66), INK)
-            drawCircle(SHARINGAN, r * 1.065f, c, style = Stroke(1.2f))
-            // Remate: Mangekyō de Itachi con un anillo de llama negra.
-            val e = Offset(c.x, c.y - r * 1.3f)
-            fire(e, r * 0.22f, t, c(0xFFB0142A), INK, INK, count = 10, len = r * 0.16f, speed = 0.8f, additive = false)
-            mangekyo(e, r * 0.22f, t * 120f)
-            // Pieza inferior: cuervo posado con ojo rojo que aletea de vez en cuando.
-            val perch = Offset(c.x + r * 0.15f, c.y + r * 1.12f)
+            // Anillo de obsidiana con vetas carmesí.
+            bevelRing(c, r * 1.0f, r * 1.13f, c(0xFF15151B), c(0xFF4A3036), INK)
+            for (i in 0 until 6) {
+                val a = TAU * i / 6 + t * 0.4f
+                drawArc(SHARINGAN.copy(alpha = 0.7f), deg(a), 22f, false, Offset(c.x - r * 1.065f, c.y - r * 1.065f), Size(r * 2.13f, r * 2.13f), style = Stroke(1.6f))
+            }
+            // Remate: Mangekyō grande coronado de fuego negro.
+            val e = Offset(c.x, c.y - r * 1.36f)
+            bloom(e, r * 0.55f, SHARINGAN, 0.45f)
+            fire(e, r * 0.3f, t, c(0xFFFF3B4A), c(0xFFB0142A), INK, count = 12, len = r * 0.22f, speed = 0.8f)
+            fire(e, r * 0.3f, t + 0.1f, INK, INK, INK, count = 12, len = r * 0.18f, speed = 0.8f, additive = false)
+            mangekyo(e, r * 0.3f, t * 120f)
+            // Base: cuervo posado, con contorno claro para que se vea y ojo rojo.
+            val perch = Offset(c.x + r * 0.08f, c.y + r * 1.16f)
             val flap = if (frac(t) > 0.8f) tri((frac(t) - 0.8f) * 10f) else 0.5f
-            crow(perch, r * 0.32f, flap, INK, 0f)
-            drawCircle(SHARINGAN, r * 0.025f, Offset(perch.x + r * 0.17f, perch.y - r * 0.03f), blendMode = BlendMode.Plus)
+            crow(Offset(perch.x + 1.5f, perch.y + 1.5f), r * 0.42f, flap, c(0xFF5A5560))
+            crow(perch, r * 0.42f, flap, INK)
+            drawCircle(SHARINGAN, r * 0.035f, Offset(perch.x + r * 0.22f, perch.y - r * 0.04f), blendMode = BlendMode.Plus)
+            bloom(Offset(perch.x + r * 0.22f, perch.y - r * 0.04f), r * 0.08f, SHARINGAN, 0.7f)
         })
 
     private val tsukuyomi = FrameStyle("amaterasu_tsukuyomi", "Tsukuyomi", "Amaterasu",
+        accent = SHARINGAN,
         back = { t, c, r ->
             // Mundo rojo invertido: cielo carmesí con luna negra y nubes.
             drawCircle(Brush.radialGradient(listOf(c(0xFFE0182A), c(0xFF7A0010), c(0xFF2A0006)), c, r * 1.6f), r * 1.55f, c)
@@ -211,37 +227,49 @@ object Frames {
     }
 
     private val madara = FrameStyle("susanoo_madara", "Susanoo perfecto (Madara)", "Susanoo",
+        accent = SUS_B,
         back = { t, c, r ->
-            bloom(c, r * 1.75f, SUS_B, 0.45f)
-            fire(c, r * 1.15f, t, SUS_B.copy(alpha = 0.55f), SUS_B.copy(alpha = 0.32f), SUS_B_LIGHT.copy(alpha = 0.35f), count = 24, len = r * 0.4f, speed = 1.2f)
-            // Hombreras de armadura a los lados (escamas superpuestas).
-            for (side in listOf(-1f, 1f)) for (k in 0 until 4) {
-                val y = c.y - r * 0.35f + k * r * 0.26f
-                val plate = Path().apply {
-                    addRoundRect(androidx.compose.ui.geometry.RoundRect(
-                        Rect(c.x + side * r * (1.08f + k * 0.04f) - r * 0.22f, y - r * 0.11f, c.x + side * r * (1.08f + k * 0.04f) + r * 0.22f, y + r * 0.11f),
-                        CornerRadius(r * 0.08f)))
+            bloom(c, r * 1.8f, SUS_B, 0.45f)
+            fire(c, r * 1.15f, t, SUS_B.copy(alpha = 0.55f), SUS_B.copy(alpha = 0.32f), SUS_B_LIGHT.copy(alpha = 0.35f), count = 26, len = r * 0.42f, speed = 1.2f)
+            // Hombreras de samurái (sode): tres láminas curvas superpuestas a cada lado.
+            for (side in listOf(-1f, 1f)) {
+                val mid = if (side < 0) PI_F else 0f
+                for (k in 0 until 3) {
+                    val r1 = r * (1.16f + k * 0.11f)
+                    val r2 = r1 + r * 0.16f
+                    val half = 0.62f - k * 0.08f
+                    val lam = ringSegment(c, r1, r2, mid - half + side * 0.12f, mid + half + side * 0.12f)
+                    val lit = 0.75f + 0.25f * wave(t, k + (if (side > 0) 5 else 0), 1.2f)
+                    drawPath(lam, Brush.radialGradient(listOf(SUS_B_LIGHT.copy(alpha = 0.8f * lit), SUS_B.copy(alpha = 0.7f), c(0xFF0E2A66).copy(alpha = 0.8f)), c, r2))
+                    drawPath(lam, SUS_B_LIGHT, style = Stroke(1.3f))
+                    // Cordones que atan las láminas.
+                    for (j in -1..1) drawCircle(SUS_B_LIGHT, 1.6f, polar(c, (r1 + r2) / 2, mid + side * 0.12f + j * half * 0.6f))
                 }
-                drawPath(plate, Brush.verticalGradient(listOf(SUS_B_LIGHT.copy(alpha = 0.75f), SUS_B.copy(alpha = 0.6f)), y - r * 0.11f, y + r * 0.11f))
-                drawPath(plate, SUS_B_LIGHT, style = Stroke(1f))
             }
         },
         front = { t, c, r ->
-            // Anillo de cristal azul.
-            bevelRing(c, r * 1.0f, r * 1.13f, SUS_B.copy(alpha = 0.75f), SUS_B_LIGHT, c(0xFF0E2A66), rotation = t * 0.2f)
-            // Remate: casco con cuernos de chakra y joya central.
-            val top = Offset(c.x, c.y - r * 1.18f)
-            chakraHorns(top, r * 0.45f, SUS_B, SUS_B_LIGHT)
-            gem(Offset(top.x, top.y + r * 0.02f), r * 0.09f, c(0xFF7FC4FF), t)
+            bevelRing(c, r * 1.0f, r * 1.14f, SUS_B.copy(alpha = 0.8f), SUS_B_LIGHT, c(0xFF0E2A66), rotation = t * 0.2f)
+            // Remate: casco con cuernos de chakra grandes y joya.
+            val top = Offset(c.x, c.y - r * 1.2f)
+            bloom(top, r * 0.6f, SUS_B, 0.35f)
+            chakraHorns(top, r * 0.7f, SUS_B, SUS_B_LIGHT)
+            val crest = Path().apply {
+                moveTo(top.x - r * 0.25f, top.y + r * 0.08f); quadraticTo(top.x, top.y - r * 0.2f, top.x + r * 0.25f, top.y + r * 0.08f)
+                lineTo(top.x + r * 0.15f, top.y + r * 0.18f); lineTo(top.x - r * 0.15f, top.y + r * 0.18f); close()
+            }
+            drawPath(crest, Brush.verticalGradient(listOf(SUS_B_LIGHT, SUS_B), top.y - r * 0.2f, top.y + r * 0.18f))
+            drawPath(crest, SUS_B_LIGHT, style = Stroke(1.2f))
+            gem(Offset(top.x, top.y + r * 0.02f), r * 0.1f, c(0xFF7FC4FF), t)
             // Base: tres magatama que giran.
             for (i in 0 until 3) {
-                val a = PI_F / 2 + (i - 1) * 0.35f + sin(t * TAU) * 0.05f
-                magatama(polar(c, r * 1.27f, a), r * 0.08f, a + t * TAU, SUS_B_LIGHT)
+                val a = PI_F / 2 + (i - 1) * 0.38f + sin(t * TAU) * 0.05f
+                magatama(polar(c, r * 1.28f, a), r * 0.1f, a + t * TAU, SUS_B_LIGHT)
             }
-            sparks(c, r * 1.05f, t, SUS_B_LIGHT, n = 10, speed = 0.7f, size = 1.6f)
+            sparks(c, r * 1.05f, t, SUS_B_LIGHT, n = 12, speed = 0.7f, size = 1.6f)
         })
 
     private val sasuke = FrameStyle("susanoo_sasuke", "Susanoo de Sasuke", "Susanoo",
+        accent = SUS_P,
         back = { t, c, r ->
             bloom(c, r * 1.7f, SUS_P, 0.45f)
             fire(c, r * 1.12f, t, SUS_P.copy(alpha = 0.5f), SUS_P.copy(alpha = 0.3f), SUS_P_LIGHT.copy(alpha = 0.35f), count = 22, len = r * 0.38f, speed = 1.3f)
@@ -293,6 +321,7 @@ object Frames {
     private val SILVER = c(0xFFB8C4D2)
 
     private val godspeed = FrameStyle("killua_godspeed", "Godspeed", "Killua",
+        accent = VOLT,
         back = { t, c, r ->
             val flash = if ((t * 10).toInt() % 7 == 0) 0.5f else 0f
             bloom(c, r * 1.7f, VOLT, 0.3f + flash)
@@ -344,39 +373,59 @@ object Frames {
         })
 
     private val zoldyck = FrameStyle("killua_zoldyck", "Mirada Zoldyck", "Killua",
+        accent = c(0xFF8E7CC3),
         back = { t, c, r ->
-            drawCircle(Brush.radialGradient(listOf(c(0xFF2A1E4A), Color.Transparent), c, r * 1.65f), r * 1.65f, c)
-            smoke(c, r, t, c(0xFF6B4CFF).copy(alpha = 0.35f), n = 14, reach = r * 0.35f, speed = 0.4f)
-        },
-        front = { t, c, r ->
-            bevelRing(c, r * 1.0f, r * 1.12f, c(0xFF2B2440), c(0xFF8E7CC3), c(0xFF0C0A14))
-            // Remate: ojos felinos de asesino que se entrecierran.
-            val e = Offset(c.x, c.y - r * 1.28f)
-            val open = 0.35f + 0.65f * ((sin(t * TAU) + 1) / 2)
-            for (side in listOf(-1f, 1f)) {
-                val p = Offset(e.x + side * r * 0.22f, e.y)
-                val eye = Path().apply {
-                    moveTo(p.x - r * 0.17f, p.y + side * 0f)
-                    quadraticTo(p.x, p.y - r * 0.13f * open, p.x + r * 0.17f, p.y - r * 0.03f * side)
-                    quadraticTo(p.x, p.y + r * 0.08f * open, p.x - r * 0.17f, p.y)
+            drawCircle(Brush.radialGradient(listOf(c(0xFF3A2A6A), c(0xFF1A1230).copy(alpha = 0.8f), Color.Transparent), c, r * 1.7f), r * 1.7f, c)
+            smoke(c, r, t, c(0xFF7B5CFF).copy(alpha = 0.4f), n = 18, reach = r * 0.45f, speed = 0.4f)
+            // Garras de asesino a los lados (dedos afilados que se abren).
+            for (side in listOf(-1f, 1f)) for (k in 0 until 4) {
+                val open = 0.1f * tri(t)
+                val a = (if (side < 0) PI_F else 0f) + side * (-0.45f + k * 0.3f + open * (k - 1.5f))
+                val base = polar(c, r * 1.1f, a)
+                val tip = polar(c, r * 1.62f, a + side * 0.15f)
+                val claw = Path().apply {
+                    moveTo(polar(c, r * 1.1f, a - 0.06f).x, polar(c, r * 1.1f, a - 0.06f).y)
+                    quadraticTo(polar(c, r * 1.45f, a - 0.04f).x, polar(c, r * 1.45f, a - 0.04f).y, tip.x, tip.y)
+                    quadraticTo(polar(c, r * 1.4f, a + 0.07f).x, polar(c, r * 1.4f, a + 0.07f).y, polar(c, r * 1.1f, a + 0.06f).x, polar(c, r * 1.1f, a + 0.06f).y)
                     close()
                 }
-                bloom(p, r * 0.25f, VOLT, 0.4f)
-                drawPath(eye, Brush.radialGradient(listOf(VOLT_LIGHT, VOLT, c(0xFF1E5D9C)), p, r * 0.17f))
-                drawOval(Color.Black, Offset(p.x - r * 0.015f, p.y - r * 0.06f * open), Size(r * 0.03f, r * 0.12f * open))
+                drawPath(claw, Brush.linearGradient(listOf(c(0xFF6A6F80), Color.White), base, tip))
+                drawPath(claw, c(0xFF2B2440), style = Stroke(1f))
             }
-            // Zarpazos en diagonal que aparecen en orden.
-            for (k in 0 until 3) {
-                val show = ((frac(t) - k * 0.08f) * 4f).coerceIn(0f, 1f) * (1 - ((frac(t) - 0.75f) * 4f).coerceIn(0f, 1f))
-                if (show <= 0f) continue
-                val from = Offset(c.x + r * (0.85f + k * 0.12f), c.y + r * (0.35f - k * 0.05f))
-                val to = Offset(c.x + r * (1.35f + k * 0.08f), c.y + r * (0.95f - k * 0.05f))
-                neon(Path().apply { moveTo(from.x, from.y); lineTo(from.x + (to.x - from.x) * show, from.y + (to.y - from.y) * show) }, VOLT, 2.2f)
+        },
+        front = { t, c, r ->
+            bevelRing(c, r * 1.0f, r * 1.13f, c(0xFF3A2F5C), c(0xFFB9A8F0), c(0xFF0C0A14))
+            // Remate: antifaz con dos ojos felinos grandes que se entrecierran.
+            val e = Offset(c.x, c.y - r * 1.32f)
+            val mask = Path().apply {
+                moveTo(e.x - r * 0.6f, e.y)
+                quadraticTo(e.x - r * 0.35f, e.y - r * 0.28f, e.x, e.y - r * 0.12f)
+                quadraticTo(e.x + r * 0.35f, e.y - r * 0.28f, e.x + r * 0.6f, e.y)
+                quadraticTo(e.x + r * 0.35f, e.y + r * 0.2f, e.x, e.y + r * 0.08f)
+                quadraticTo(e.x - r * 0.35f, e.y + r * 0.2f, e.x - r * 0.6f, e.y)
+                close()
+            }
+            drawPath(mask, Brush.verticalGradient(listOf(c(0xFF2B2440), c(0xFF0C0A14)), e.y - r * 0.28f, e.y + r * 0.2f))
+            drawPath(mask, c(0xFF8E7CC3), style = Stroke(1.3f))
+            val open = 0.3f + 0.7f * ((sin(t * TAU) + 1) / 2)
+            for (side in listOf(-1f, 1f)) {
+                val p = Offset(e.x + side * r * 0.28f, e.y - r * 0.01f)
+                val eye = Path().apply {
+                    moveTo(p.x - r * 0.18f, p.y + side * r * 0.02f)
+                    quadraticTo(p.x, p.y - r * 0.14f * open, p.x + r * 0.18f, p.y - side * r * 0.03f)
+                    quadraticTo(p.x, p.y + r * 0.09f * open, p.x - r * 0.18f, p.y + side * r * 0.02f)
+                    close()
+                }
+                bloom(p, r * 0.3f, VOLT, 0.5f)
+                drawPath(eye, Brush.radialGradient(listOf(VOLT_LIGHT, VOLT, c(0xFF1E5D9C)), p, r * 0.18f))
+                drawOval(Color.Black, Offset(p.x - r * 0.018f, p.y - r * 0.065f * open), Size(r * 0.036f, r * 0.13f * open))
+                drawCircle(Color.White, r * 0.015f, Offset(p.x - r * 0.06f, p.y - r * 0.03f))
             }
             // Base: dos dagas cruzadas.
-            val b = Offset(c.x, c.y + r * 1.25f)
-            sword(b, r * 0.3f, 50f, SILVER)
-            sword(b, r * 0.3f, -50f, SILVER)
+            val b = Offset(c.x, c.y + r * 1.26f)
+            sword(b, r * 0.42f, 50f, c(0xFFD6DEE8))
+            sword(b, r * 0.42f, -50f, c(0xFFD6DEE8))
+            gem(b, r * 0.06f, VOLT, t)
         })
 
     val killua = listOf(godspeed, zoldyck)
@@ -387,6 +436,7 @@ object Frames {
     private val GUNMETAL = c(0xFF3B4352)
 
     private val darkKnight = FrameStyle("batman_knight", "Caballero oscuro", "Batman",
+        accent = SIGNAL,
         back = { t, c, r ->
             val flash = if (frac(t) in 0.62f..0.66f || frac(t) in 0.7f..0.72f) 1f else 0f
             drawCircle(c(0xFF9FB4D9).copy(alpha = 0.3f * flash), r * 1.65f, c, blendMode = BlendMode.Plus)
@@ -445,6 +495,7 @@ object Frames {
         })
 
     private val gothamNight = FrameStyle("batman_gotham", "Noches de Gotham", "Batman",
+        accent = c(0xFF9FB4D9),
         back = { t, c, r ->
             drawCircle(Brush.verticalGradient(listOf(c(0xFF2A1F3D), c(0xFF0D1424)), c.y - r * 1.6f, c.y + r), r * 1.6f, c)
             val moon = Offset(c.x - r * 0.85f, c.y - r * 0.9f)
@@ -486,6 +537,7 @@ object Frames {
     private val VOID_RIM = c(0xFF6A2BC2)
 
     private val goldenGuardian = FrameStyle("sentry_guardian", "Guardián dorado", "Sentry",
+        accent = SUN,
         back = { t, c, r ->
             bloom(c, r * 1.85f, SUN, 0.5f)
             rotate(t * 30f, c) {
@@ -503,8 +555,8 @@ object Frames {
             }
             // Alas de ángel doradas a los lados.
             val flap = (sin(t * TAU) + 1) / 2
-            featherWing(Offset(c.x - r * 0.95f, c.y - r * 0.15f), -1f, r * 0.75f, c(0xFFFFF1C2), SUN, GOLD_DARK.copy(alpha = 0.5f), flap)
-            featherWing(Offset(c.x + r * 0.95f, c.y - r * 0.15f), 1f, r * 0.75f, c(0xFFFFF1C2), SUN, GOLD_DARK.copy(alpha = 0.5f), flap)
+            featherWing(Offset(c.x - r * 0.98f, c.y - r * 0.2f), -1f, r * 0.72f, c(0xFFFFF1C2), SUN, GOLD_DARK.copy(alpha = 0.5f), flap)
+            featherWing(Offset(c.x + r * 0.98f, c.y - r * 0.2f), 1f, r * 0.72f, c(0xFFFFF1C2), SUN, GOLD_DARK.copy(alpha = 0.5f), flap)
         },
         front = { t, c, r ->
             bevelRing(c, r * 1.0f, r * 1.14f, c(0xFFE0A93A), SUN_LIGHT, GOLD_DARK, rotation = t * 0.15f)
@@ -528,6 +580,7 @@ object Frames {
         })
 
     private val theVoid = FrameStyle("sentry_void", "The Void", "Sentry",
+        accent = VOID_RIM,
         back = { t, c, r ->
             drawCircle(Brush.radialGradient(listOf(VOID, VOID.copy(alpha = 0.85f), Color.Transparent), c, r * 1.75f), r * 1.75f, c)
             for (i in 0 until 13) {
@@ -545,12 +598,14 @@ object Frames {
             bevelRing(c, r * 1.0f, r * 1.12f, c(0xFF1E0E33), VOID_RIM, Color.Black)
             // Remate: rostro del Void, dos ojos rojos que se abren.
             val open = (sin(t * TAU) * 1.8f - 0.2f).coerceIn(0f, 1f)
-            val e = Offset(c.x, c.y - r * 1.3f)
-            drawOval(Brush.radialGradient(listOf(c(0xFF2A1048), VOID), e, r * 0.35f), Offset(e.x - r * 0.38f, e.y - r * 0.2f), Size(r * 0.76f, r * 0.4f))
+            val e = Offset(c.x, c.y - r * 1.34f)
+            bloom(e, r * 0.6f, VOID_RIM, 0.35f)
+            drawOval(Brush.radialGradient(listOf(c(0xFF2A1048), VOID), e, r * 0.5f), Offset(e.x - r * 0.55f, e.y - r * 0.28f), Size(r * 1.1f, r * 0.56f))
+            drawOval(VOID_RIM, Offset(e.x - r * 0.55f, e.y - r * 0.28f), Size(r * 1.1f, r * 0.56f), style = Stroke(1.5f))
             for (side in listOf(-1f, 1f)) {
-                val p = Offset(e.x + side * r * 0.16f, e.y)
-                bloom(p, r * 0.22f, c(0xFFFF2244), 0.6f * open)
-                drawOval(c(0xFFFF4D6A), Offset(p.x - r * 0.1f, p.y - r * 0.025f * open), Size(r * 0.2f, r * 0.05f * open + 0.5f))
+                val p = Offset(e.x + side * r * 0.22f, e.y)
+                bloom(p, r * 0.32f, c(0xFFFF2244), 0.7f * open)
+                drawOval(c(0xFFFF4D6A), Offset(p.x - r * 0.15f, p.y - r * 0.04f * open), Size(r * 0.3f, r * 0.08f * open + 0.5f))
             }
             // Base: gema oscura con núcleo violeta.
             gem(Offset(c.x, c.y + r * 1.22f), r * 0.1f, VOID_RIM, t)
@@ -565,20 +620,17 @@ object Frames {
     private val GOLD = c(0xFFE0A93A)
 
     private val markArmor = FrameStyle("ironman_mark", "Armadura Mark", "Iron Man",
+        accent = ARC,
         back = { t, c, r ->
             bloom(c, r * 1.6f, GOLD, 0.2f)
-            // Propulsores laterales con llama azul.
             for (side in listOf(-1f, 1f)) {
-                val p = Offset(c.x + side * r * 1.32f, c.y + r * 0.35f)
+                val p = Offset(c.x + side * r * 1.34f, c.y + r * 0.42f)
                 val flick = 0.8f + 0.2f * wave(t, if (side > 0) 1 else 2, 4f)
-                val jet = Path().apply {
-                    moveTo(p.x - r * 0.08f, p.y); lineTo(p.x, p.y + r * 0.45f * flick); lineTo(p.x + r * 0.08f, p.y); close()
-                }
-                drawPath(jet, Brush.verticalGradient(listOf(ARC_LIGHT, ARC.copy(alpha = 0f)), p.y, p.y + r * 0.45f), blendMode = BlendMode.Plus)
+                val jet = Path().apply { moveTo(p.x - r * 0.09f, p.y); lineTo(p.x, p.y + r * 0.5f * flick); lineTo(p.x + r * 0.09f, p.y); close() }
+                drawPath(jet, Brush.verticalGradient(listOf(ARC_LIGHT, ARC.copy(alpha = 0f)), p.y, p.y + r * 0.5f), blendMode = BlendMode.Plus)
             }
         },
         front = { t, c, r ->
-            // Placas roja y doradas con remaches.
             val n = 6
             for (i in 0 until n) {
                 val a0 = UP + TAU * i / n + 0.03f
@@ -588,40 +640,59 @@ object Frames {
                     if (red) c(0xFF4A0508) else c(0xFF6B4A10), frac(t * 0.6f + i / n.toFloat()), Rect(c, r * 1.2f))
                 for (k in 0..1) drawCircle(c(0xFF2A2A2A), 1.4f, polar(c, r * 1.1f, a0 + (a1 - a0) * (0.2f + 0.6f * k)))
             }
-            // Propulsores laterales (carcasa).
             for (side in listOf(-1f, 1f)) {
-                val p = Offset(c.x + side * r * 1.32f, c.y + r * 0.3f)
-                drawRoundRect(Brush.verticalGradient(listOf(c(0xFFC7CDD4), c(0xFF5A626B)), p.y - r * 0.15f, p.y + r * 0.1f),
-                    Offset(p.x - r * 0.1f, p.y - r * 0.15f), Size(r * 0.2f, r * 0.25f), CornerRadius(4f))
-                bloom(Offset(p.x, p.y + r * 0.08f), r * 0.12f, ARC, 0.8f)
+                val p = Offset(c.x + side * r * 1.34f, c.y + r * 0.35f)
+                drawRoundRect(Brush.verticalGradient(listOf(c(0xFFC7CDD4), c(0xFF5A626B)), p.y - r * 0.18f, p.y + r * 0.1f),
+                    Offset(p.x - r * 0.11f, p.y - r * 0.18f), Size(r * 0.22f, r * 0.28f), CornerRadius(5f))
+                bloom(Offset(p.x, p.y + r * 0.08f), r * 0.14f, ARC, 0.8f)
             }
-            // Remate: casco dorado con ojos que se encienden.
-            val top = Offset(c.x, c.y - r * 1.3f)
-            val helm = Path().apply {
-                moveTo(top.x - r * 0.28f, top.y - r * 0.12f)
-                quadraticTo(top.x, top.y - r * 0.38f, top.x + r * 0.28f, top.y - r * 0.12f)
-                lineTo(top.x + r * 0.22f, top.y + r * 0.18f)
-                lineTo(top.x, top.y + r * 0.26f)
-                lineTo(top.x - r * 0.22f, top.y + r * 0.18f)
+            // Remate: casco reconocible (frente roja, máscara dorada, ojos y boca).
+            val h = Offset(c.x, c.y - r * 1.38f)
+            val s = r * 0.42f
+            val helmet = Path().apply {
+                moveTo(h.x - s * 0.62f, h.y - s * 0.3f)
+                quadraticTo(h.x, h.y - s * 0.95f, h.x + s * 0.62f, h.y - s * 0.3f)
+                lineTo(h.x + s * 0.58f, h.y + s * 0.35f)
+                quadraticTo(h.x + s * 0.4f, h.y + s * 0.75f, h.x, h.y + s * 0.82f)
+                quadraticTo(h.x - s * 0.4f, h.y + s * 0.75f, h.x - s * 0.58f, h.y + s * 0.35f)
                 close()
             }
-            metal(helm, GOLD, c(0xFFFFF0B3), c(0xFF6B4A10), frac(t * 0.5f), Rect(top, r * 0.3f))
-            val glowEyes = 0.6f + 0.4f * tri(t * 2)
-            for (side in listOf(-1f, 1f)) {
-                val eye = Offset(top.x + side * r * 0.1f, top.y - r * 0.02f)
-                bloom(eye, r * 0.12f, ARC, glowEyes)
-                drawRect(ARC_LIGHT, Offset(eye.x - r * 0.06f, eye.y - r * 0.015f), Size(r * 0.12f, r * 0.03f))
+            metal(helmet, HOT_ROD, c(0xFFFF6B6B), c(0xFF4A0508), frac(t * 0.5f), Rect(h, s))
+            val face = Path().apply {
+                moveTo(h.x - s * 0.42f, h.y - s * 0.32f)
+                lineTo(h.x - s * 0.1f, h.y - s * 0.45f)
+                lineTo(h.x + s * 0.1f, h.y - s * 0.45f)
+                lineTo(h.x + s * 0.42f, h.y - s * 0.32f)
+                lineTo(h.x + s * 0.4f, h.y + s * 0.3f)
+                quadraticTo(h.x + s * 0.25f, h.y + s * 0.62f, h.x, h.y + s * 0.68f)
+                quadraticTo(h.x - s * 0.25f, h.y + s * 0.62f, h.x - s * 0.4f, h.y + s * 0.3f)
+                close()
             }
+            metal(face, GOLD, c(0xFFFFF0B3), c(0xFF6B4A10), frac(t * 0.5f + 0.3f), Rect(h, s))
+            val eyes = 0.65f + 0.35f * tri(t * 2)
+            for (side in listOf(-1f, 1f)) {
+                val eye = Path().apply {
+                    moveTo(h.x + side * s * 0.06f, h.y - s * 0.12f)
+                    lineTo(h.x + side * s * 0.32f, h.y - s * 0.18f)
+                    lineTo(h.x + side * s * 0.3f, h.y - s * 0.08f)
+                    lineTo(h.x + side * s * 0.08f, h.y - s * 0.04f)
+                    close()
+                }
+                bloom(Offset(h.x + side * s * 0.2f, h.y - s * 0.11f), s * 0.3f, ARC, eyes)
+                drawPath(eye, ARC_LIGHT)
+            }
+            drawLine(c(0xFF6B4A10), Offset(h.x - s * 0.2f, h.y + s * 0.38f), Offset(h.x + s * 0.2f, h.y + s * 0.38f), 1.5f)
             // Base: reactor arc.
-            val b = Offset(c.x, c.y + r * 1.25f)
-            drawCircle(Brush.radialGradient(listOf(c(0xFFC7CDD4), c(0xFF4A525B)), b, r * 0.16f), r * 0.16f, b)
-            bloom(b, r * 0.3f, ARC, 0.6f + 0.3f * tri(t * 3))
-            drawCircle(ARC_LIGHT, r * 0.08f, b)
-            val tri3 = Path().apply { for (k in 0..3) { val p = polar(b, r * 0.12f, UP + TAU * k / 3); if (k == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) } }
+            val b = Offset(c.x, c.y + r * 1.26f)
+            drawCircle(Brush.radialGradient(listOf(c(0xFFC7CDD4), c(0xFF4A525B)), b, r * 0.18f), r * 0.18f, b)
+            bloom(b, r * 0.32f, ARC, 0.6f + 0.3f * tri(t * 3))
+            drawCircle(ARC_LIGHT, r * 0.09f, b)
+            val tri3 = Path().apply { for (k in 0..3) { val p = polar(b, r * 0.13f, UP + TAU * k / 3); if (k == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y) } }
             drawPath(tri3, ARC, style = Stroke(1.5f))
         })
 
     private val arcReactor = FrameStyle("ironman_reactor", "Reactor arc", "Iron Man",
+        accent = ARC,
         back = { t, c, r -> bloom(c, r * 1.7f, ARC, 0.45f + 0.2f * tri(t * 2)) },
         front = { t, c, r ->
             metal(ringSegment(c, r * 1.0f, r * 1.45f, 0f, TAU * 0.9999f), c(0xFF7C8794), c(0xFFE6EDF3), c(0xFF2C333B), frac(t * 0.5f), Rect(c, r * 1.45f))
@@ -650,6 +721,7 @@ object Frames {
     private val SPIDEY_BLUE = c(0xFF1F55C0)
 
     private val spideySuit = FrameStyle("spiderman_suit", "Trepamuros", "Spider-Man",
+        accent = SPIDEY_RED,
         back = { t, c, r ->
             // Telaraña con rocío detrás, anclada a las esquinas.
             val silk = c(0xCCEDEDED)
@@ -693,55 +765,58 @@ object Frames {
         })
 
     private val spiderVerse = FrameStyle("spiderman_verse", "Spider-Verse", "Spider-Man",
+        accent = c(0xFFFF2E63),
         back = { t, c, r ->
-            // Fondo de cómic: trama de puntos y rayos de impacto.
-            for (ring in 0 until 5) {
-                val rr = r * (1.12f + ring * 0.1f)
-                val n = 28 + ring * 6
-                for (i in 0 until n) drawCircle(c(0xFFFF4FA3).copy(alpha = 0.6f - ring * 0.08f), 2.6f - ring * 0.35f, polar(c, rr, TAU * i / n + ring * 0.1f))
+            // Viñeta de cómic: disco con degradado magenta-cian y trama de puntos.
+            drawCircle(Brush.linearGradient(listOf(c(0xFFFF2E63), c(0xFF7B2CBF), c(0xFF00B8D9)), Offset(c.x - r * 1.5f, c.y - r * 1.5f), Offset(c.x + r * 1.5f, c.y + r * 1.5f)), r * 1.5f, c)
+            for (gy in -6..6) for (gx in -6..6) {
+                val p = Offset(c.x + gx * r * 0.24f + (gy % 2) * r * 0.12f, c.y + gy * r * 0.24f)
+                val d = kotlin.math.hypot(p.x - c.x, p.y - c.y)
+                if (d > r * 1.05f && d < r * 1.48f) drawCircle(Color.Black.copy(alpha = 0.35f), r * 0.03f * (d / (r * 1.5f)) * 2, p)
             }
-            rotate(t * 20f, c) {
-                for (i in 0 until 12) {
-                    val a = TAU * i / 12
-                    drawLine(c(0xFF00E5FF).copy(alpha = 0.25f), polar(c, r * 1.2f, a), polar(c, r * 1.65f, a), 2f)
-                }
+            drawCircle(Color.Black, r * 1.5f, c, style = Stroke(3f))
+            // Líneas de velocidad que giran.
+            rotate(t * 25f, c) {
+                for (i in 0 until 14) drawLine(Color.White.copy(alpha = 0.35f), polar(c, r * 1.22f, TAU * i / 14), polar(c, r * 1.46f, TAU * i / 14), 1.5f)
             }
         },
         front = { t, c, r ->
-            val glitch = if ((t * 20).toInt() % 6 == 0) r * 0.07f else r * 0.015f
-            drawCircle(c(0xFF00E5FF), r + 4, Offset(c.x - glitch, c.y), style = Stroke(5f), blendMode = BlendMode.Plus)
-            drawCircle(c(0xFFFF2E63), r + 4, Offset(c.x + glitch, c.y), style = Stroke(5f), blendMode = BlendMode.Plus)
-            drawCircle(Color.Black, r + 4, c, style = Stroke(2f))
-            if ((t * 20).toInt() % 6 == 0) for (k in 0 until 3) {
+            val g = (t * 20).toInt() % 6 == 0
+            val glitch = if (g) r * 0.07f else r * 0.015f
+            drawCircle(c(0xFF00E5FF), r * 1.06f, Offset(c.x - glitch, c.y), style = Stroke(6f), blendMode = BlendMode.Plus)
+            drawCircle(c(0xFFFF2E63), r * 1.06f, Offset(c.x + glitch, c.y), style = Stroke(6f), blendMode = BlendMode.Plus)
+            drawCircle(Color.Black, r * 1.06f, c, style = Stroke(2.5f))
+            if (g) for (k in 0 until 3) {
                 val y = c.y + r * (((k * 41) % 20) / 10f - 1f)
                 drawRect(c(0xFF00E5FF).copy(alpha = 0.6f), Offset(c.x - r * 1.5f, y), Size(r * 3f, 3f), blendMode = BlendMode.Plus)
             }
-            // Remate: bocadillo "THWIP!" estilo cómic.
-            val b = Offset(c.x + r * 0.8f, c.y - r * 1.15f)
-            val pop = tri(t * 2)
-            scale(0.75f + 0.25f * pop, b) {
+            // Remate: bocadillo de impacto con la araña.
+            val b = Offset(c.x + r * 0.85f, c.y - r * 1.15f)
+            scale(0.8f + 0.2f * tri(t * 2), b) {
                 val star = Path()
-                for (k in 0..18) {
-                    val rr = if (k % 2 == 0) r * 0.38f else r * 0.24f
-                    val p = polar(b, rr, TAU * k / 18)
+                for (k in 0..20) {
+                    val rr = if (k % 2 == 0) r * 0.42f else r * 0.27f
+                    val p = polar(b, rr, TAU * k / 20)
                     if (k == 0) star.moveTo(p.x, p.y) else star.lineTo(p.x, p.y)
                 }
                 drawPath(star, c(0xFFFFE600))
-                drawPath(star, Color.Black, style = Stroke(2f))
-                spider(b, r * 0.13f, Color.Black, t)
+                drawPath(star, Color.Black, style = Stroke(2.5f))
+                spider(b, r * 0.15f, Color.Black, t)
             }
-            // Base: máscara con ojos blancos.
-            val m = Offset(c.x, c.y + r * 1.25f)
-            drawOval(SPIDEY_RED, Offset(m.x - r * 0.28f, m.y - r * 0.18f), Size(r * 0.56f, r * 0.36f))
+            // Base: máscara grande con ojos blancos de cómic.
+            val m = Offset(c.x, c.y + r * 1.28f)
+            drawOval(Brush.verticalGradient(listOf(c(0xFFFF4A52), SPIDEY_RED), m.y - r * 0.24f, m.y + r * 0.24f), Offset(m.x - r * 0.36f, m.y - r * 0.24f), Size(r * 0.72f, r * 0.48f))
+            for (i in 0 until 6) drawLine(Color.Black.copy(alpha = 0.5f), m, polar(m, r * 0.36f, TAU * i / 6), 0.8f)
+            drawOval(Color.Black, Offset(m.x - r * 0.36f, m.y - r * 0.24f), Size(r * 0.72f, r * 0.48f), style = Stroke(2f))
             for (side in listOf(-1f, 1f)) {
                 val eye = Path().apply {
-                    moveTo(m.x + side * r * 0.04f, m.y - r * 0.02f)
-                    quadraticTo(m.x + side * r * 0.2f, m.y - r * 0.16f, m.x + side * r * 0.22f, m.y + r * 0.02f)
-                    quadraticTo(m.x + side * r * 0.12f, m.y + r * 0.06f, m.x + side * r * 0.04f, m.y - r * 0.02f)
+                    moveTo(m.x + side * r * 0.05f, m.y - r * 0.02f)
+                    quadraticTo(m.x + side * r * 0.26f, m.y - r * 0.22f, m.x + side * r * 0.3f, m.y + r * 0.03f)
+                    quadraticTo(m.x + side * r * 0.15f, m.y + r * 0.08f, m.x + side * r * 0.05f, m.y - r * 0.02f)
                     close()
                 }
                 drawPath(eye, Color.White)
-                drawPath(eye, Color.Black, style = Stroke(2f))
+                drawPath(eye, Color.Black, style = Stroke(2.5f))
             }
         })
 
@@ -753,49 +828,57 @@ object Frames {
     private val CLOVER = c(0xFF2FAF4F)
 
     private val antiMagic = FrameStyle("asta_antimagic", "Antimagia", "Asta",
+        accent = ANTI_EDGE,
         back = { t, c, r ->
-            bloom(c, r * 1.6f, Color.White, 0.06f)
-            fire(c, r * 1.05f, t, ANTI_EDGE.copy(alpha = 0.85f), c(0xFF6A6A6A), c(0xFF2A2A2A), count = 32, len = r * 0.55f, speed = 2.4f, additive = false, width = 0.09f)
-            fire(c, r * 1.05f, t + 0.07f, ANTI, ANTI, c(0xFF1A1A1A), count = 32, len = r * 0.47f, speed = 2.4f, additive = false, width = 0.08f)
+            drawCircle(Brush.radialGradient(listOf(c(0xFF4A4A4A).copy(alpha = 0.5f), Color.Transparent), c, r * 1.7f), r * 1.7f, c)
             // Espada mata-demonios gigante detrás, en diagonal.
-            sword(Offset(c.x + r * 0.95f, c.y + r * 0.1f), r * 1.1f, 30f, c(0xFF2A2A2A))
-            sword(Offset(c.x + r * 0.95f, c.y + r * 0.1f), r * 1.05f, 30f, c(0xFF3C3C3C))
-            for (i in 0 until 10) {
-                val ph = frac(t * 0.9f + i * 0.1f)
-                rect(polar(c, r * (1.25f + ph * 0.4f), TAU * ((i * 0.37f) % 1f)), 5f * (1 - ph), 5f * (1 - ph), ANTI)
+            sword(Offset(c.x + r * 0.2f, c.y - r * 0.1f), r * 1.55f, 35f, c(0xFF1C1C1C))
+            sword(Offset(c.x + r * 0.2f, c.y - r * 0.1f), r * 1.5f, 35f, c(0xFF3A3A3A))
+            // Llamas de antimagia con filo blanco de tinta.
+            fire(c, r * 1.05f, t, Color.White, c(0xFFBDBDBD), c(0xFF4A4A4A), count = 34, len = r * 0.6f, speed = 2.3f, additive = false, width = 0.085f)
+            fire(c, r * 1.05f, t + 0.06f, ANTI, ANTI, c(0xFF1A1A1A), count = 34, len = r * 0.52f, speed = 2.3f, additive = false, width = 0.075f)
+            for (i in 0 until 12) {
+                val ph = frac(t * 0.9f + i / 12f)
+                val p = polar(c, r * (1.3f + ph * 0.35f), TAU * ((i * 0.37f) % 1f))
+                rect(p, 6f * (1 - ph), 6f * (1 - ph), ANTI)
+                drawRect(Color.White.copy(alpha = 0.6f * (1 - ph)), Offset(p.x - 3f * (1 - ph), p.y - 3f * (1 - ph)), Size(6f * (1 - ph), 6f * (1 - ph)), style = Stroke(0.8f))
             }
         },
         front = { t, c, r ->
-            bevelRing(c, r * 1.0f, r * 1.12f, c(0xFF1C1C1C), c(0xFF8A8A8A), Color.Black)
-            drawCircle(ANTI_EDGE, r * 1.15f, c, style = Stroke(1f))
-            // Remate: grimorio negro con trébol de cinco hojas.
+            bevelRing(c, r * 1.0f, r * 1.13f, c(0xFF1C1C1C), c(0xFF9A9A9A), Color.Black)
+            drawCircle(Color.White, r * 1.16f, c, style = Stroke(1.2f))
+            // Remate: grimorio grande de cinco hojas, que flota y brilla en verde.
             val bob = sin(t * TAU) * r * 0.04f
-            val at = Offset(c.x, c.y - r * 1.3f + bob)
+            val at = Offset(c.x, c.y - r * 1.36f + bob)
+            bloom(at, r * 0.55f, CLOVER, 0.2f + 0.15f * tri(t * 2))
             rotate(sin(t * TAU) * 4f, at) {
-                drawRoundRect(Brush.verticalGradient(listOf(c(0xFF2A2A2A), c(0xFF0A0A0A)), at.y - r * 0.22f, at.y + r * 0.22f),
-                    Offset(at.x - r * 0.3f, at.y - r * 0.22f), Size(r * 0.6f, r * 0.44f), CornerRadius(4f))
-                drawRoundRect(c(0xFF8A7A50), Offset(at.x - r * 0.3f, at.y - r * 0.22f), Size(r * 0.6f, r * 0.44f), CornerRadius(4f), style = Stroke(1.5f))
-                clover(at, r * 0.15f, 5, c(0xFF3A3A3A))
-                clover(at, r * 0.12f, 5, Color.Black)
+                drawRoundRect(Brush.verticalGradient(listOf(c(0xFF2E2E2E), c(0xFF080808)), at.y - r * 0.3f, at.y + r * 0.3f),
+                    Offset(at.x - r * 0.42f, at.y - r * 0.3f), Size(r * 0.84f, r * 0.6f), CornerRadius(6f))
+                drawRoundRect(c(0xFFB8A46A), Offset(at.x - r * 0.42f, at.y - r * 0.3f), Size(r * 0.84f, r * 0.6f), CornerRadius(6f), style = Stroke(2f))
+                drawRoundRect(c(0xFFB8A46A).copy(alpha = 0.5f), Offset(at.x - r * 0.36f, at.y - r * 0.24f), Size(r * 0.72f, r * 0.48f), CornerRadius(4f), style = Stroke(1f))
+                for (cx in listOf(-1f, 1f)) for (cy in listOf(-1f, 1f)) drawCircle(c(0xFFB8A46A), 2f, Offset(at.x + cx * r * 0.36f, at.y + cy * r * 0.24f))
+                clover(at, r * 0.2f, 5, c(0xFF3A3A3A))
+                clover(at, r * 0.16f, 5, Color.Black)
+                drawCircle(CLOVER, 2.5f, at)
             }
-            bloom(at, r * 0.4f, CLOVER, 0.15f + 0.1f * tri(t * 2))
-            // Base: tela negra rasgada.
+            // Base: tela negra rasgada que ondea.
             val b = Offset(c.x, c.y + r * 1.15f)
             val cloth = Path().apply {
-                moveTo(b.x - r * 0.4f, b.y)
-                lineTo(b.x + r * 0.4f, b.y)
-                lineTo(b.x + r * 0.3f, b.y + r * 0.25f + sin(t * TAU) * 3f)
-                lineTo(b.x + r * 0.1f, b.y + r * 0.15f)
-                lineTo(b.x - r * 0.05f, b.y + r * 0.32f + sin(t * TAU + 1) * 3f)
-                lineTo(b.x - r * 0.2f, b.y + r * 0.16f)
-                lineTo(b.x - r * 0.35f, b.y + r * 0.26f)
+                moveTo(b.x - r * 0.48f, b.y)
+                lineTo(b.x + r * 0.48f, b.y)
+                lineTo(b.x + r * 0.38f, b.y + r * 0.3f + sin(t * TAU) * 3f)
+                lineTo(b.x + r * 0.14f, b.y + r * 0.18f)
+                lineTo(b.x - r * 0.02f, b.y + r * 0.38f + sin(t * TAU + 1) * 3f)
+                lineTo(b.x - r * 0.22f, b.y + r * 0.2f)
+                lineTo(b.x - r * 0.42f, b.y + r * 0.3f + sin(t * TAU + 2) * 3f)
                 close()
             }
             drawPath(cloth, ANTI)
-            drawPath(cloth, ANTI_EDGE, style = Stroke(1f))
+            drawPath(cloth, Color.White, style = Stroke(1.2f))
         })
 
     private val blackAsta = FrameStyle("asta_black", "Black Asta", "Asta",
+        accent = c(0xFFFF3030),
         back = { t, c, r ->
             // Aura negra en espiral.
             rotate(t * 120f, c) {
@@ -852,45 +935,49 @@ object Frames {
     private val NEN = c(0xFF9B5CFF)
 
     private val dancho = FrameStyle("chrollo_dancho", "Danchō", "Chrollo",
+        accent = BONE,
         back = { t, c, r ->
-            bloom(c, r * 1.6f, NEN, 0.15f)
-            // Patas de araña que salen por detrás y se mueven.
+            bloom(c, r * 1.6f, NEN, 0.18f)
+            // Patas de araña articuladas, con brillo, que se mueven.
             for (side in listOf(-1f, 1f)) for (k in 0 until 4) {
-                val a = (if (side < 0) PI_F else 0f) + side * (-0.7f + k * 0.45f)
+                val a = (if (side < 0) PI_F else 0f) + side * (-0.75f + k * 0.48f)
                 val bend = sin(t * TAU + k + side) * 0.08f
                 val root = polar(c, r * 0.95f, a)
-                val knee = polar(c, r * 1.45f, a - side * 0.25f + bend)
-                val foot = polar(c, r * 1.62f, a + side * 0.18f + bend)
-                drawLine(c(0xFF22222A), root, knee, r * 0.06f, StrokeCap.Round)
-                drawLine(c(0xFF22222A), knee, foot, r * 0.045f, StrokeCap.Round)
-                drawLine(c(0xFF6E6E7C), root, knee, r * 0.015f, StrokeCap.Round)
-            }
-            // Cuello de piel negra.
-            for (i in 0 until 50) {
-                val a = TAU * i / 50
-                val h = r * (0.16f + 0.08f * wave(t, i, 0.6f))
-                val tip = polar(c, r * 1.05f + h, a + 0.04f * sin(t * TAU + i))
-                drawLine(c(0xFF1E1E26), polar(c, r * 0.98f, a), tip, r * 0.09f, StrokeCap.Round)
-                drawLine(c(0xFF5E5E6C), polar(c, r * 1.08f, a), tip, r * 0.022f, StrokeCap.Round)
+                val knee = polar(c, r * 1.5f, a - side * 0.28f + bend)
+                val foot = polar(c, r * 1.66f, a + side * 0.2f + bend)
+                drawLine(c(0xFF15151B), root, knee, r * 0.085f, StrokeCap.Round)
+                drawLine(c(0xFF15151B), knee, foot, r * 0.06f, StrokeCap.Round)
+                drawLine(c(0xFF7A7A8A), root, knee, r * 0.02f, StrokeCap.Round)
+                drawLine(c(0xFF7A7A8A), knee, foot, r * 0.015f, StrokeCap.Round)
+                drawCircle(c(0xFF2A2A33), r * 0.05f, knee)
             }
         },
         front = { t, c, r ->
-            bevelRing(c, r * 1.0f, r * 1.08f, c(0xFF1A1A22), BONE, TROUPE)
-            // Remate: cruz invertida colgando de una cadena.
-            val top = Offset(c.x, c.y - r * 1.28f + sin(t * TAU) * 2f)
-            drawLine(BONE.copy(alpha = 0.7f), Offset(c.x, c.y - r * 1.08f), Offset(top.x, top.y + r * 0.2f), 1.2f)
-            bloom(top, r * 0.3f, BONE, 0.25f)
-            cross(top, r * 0.2f, BONE, inverted = true, width = r * 0.055f)
-            // Base: tatuaje de la Brigada (araña con el 0).
-            val b = Offset(c.x, c.y + r * 1.24f)
-            drawCircle(BONE, r * 0.22f, b)
-            drawCircle(TROUPE, r * 0.22f, b, style = Stroke(1.5f))
-            spider(b, r * 0.2f, TROUPE, t)
-            drawCircle(BONE, r * 0.05f, Offset(b.x, b.y + r * 0.04f))
-            drawCircle(TROUPE, r * 0.032f, Offset(b.x, b.y + r * 0.04f), style = Stroke(1.4f))
+            // Cuello de piel: mechones redondos que se superponen y se mueven con el viento.
+            for (layer in 0 until 2) for (i in 0 until 30) {
+                val a = TAU * (i + layer * 0.5f) / 30
+                val rr = r * (1.08f + layer * 0.09f) + sin(t * TAU + i * 0.7f) * r * 0.012f
+                val p = polar(c, rr, a)
+                val size = r * (0.1f - layer * 0.015f)
+                drawCircle(Brush.radialGradient(listOf(c(0xFF4A4A56), c(0xFF15151B)), Offset(p.x - size * 0.3f, p.y - size * 0.3f), size * 1.2f), size, p)
+            }
+            drawCircle(BONE.copy(alpha = 0.85f), r * 1.01f, c, style = Stroke(1.5f))
+            // Remate: cruz invertida grande colgando de una cadena, con halo.
+            val top = Offset(c.x, c.y - r * 1.42f + sin(t * TAU) * 2f)
+            for (k in 0 until 4) drawCircle(BONE.copy(alpha = 0.8f), 2.2f, Offset(c.x, c.y - r * 1.2f - k * r * 0.05f), style = Stroke(1f))
+            bloom(top, r * 0.4f, BONE, 0.3f)
+            cross(top, r * 0.26f, BONE, inverted = true, width = r * 0.07f)
+            // Base: tatuaje de la Brigada, la araña con el número 0.
+            val b = Offset(c.x, c.y + r * 1.32f)
+            drawCircle(Brush.radialGradient(listOf(Color.White, BONE), b, r * 0.27f), r * 0.27f, b)
+            drawCircle(TROUPE, r * 0.27f, b, style = Stroke(2f))
+            spider(b, r * 0.24f, TROUPE, t)
+            drawCircle(BONE, r * 0.06f, Offset(b.x, b.y + r * 0.05f))
+            drawCircle(TROUPE, r * 0.04f, Offset(b.x, b.y + r * 0.05f), style = Stroke(1.6f))
         })
 
     private val skillHunter = FrameStyle("chrollo_skillhunter", "Skill Hunter", "Chrollo",
+        accent = NEN,
         back = { t, c, r ->
             bloom(c, r * 1.7f, NEN, 0.35f)
             for (i in 0 until 7) {

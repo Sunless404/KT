@@ -37,6 +37,8 @@ class FrameStyle(
     val collection: String,
     val back: FramePainter = { _, _, _ -> },
     val front: FramePainter = { _, _, _ -> },
+    /** Color del brillo interior que tiñe el borde de la foto (transparente = sin brillo). */
+    val accent: Color = Color.Transparent,
 )
 
 /** Foto de perfil con su marco animado. El marco ocupa un 70 % más que la foto (para alas y remates). */
@@ -52,7 +54,21 @@ fun FramedAvatar(photo: ByteArray?, name: String, size: Dp, frame: FrameStyle?, 
     Box(modifier.size(size * 1.7f), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) { frame.back(this, t, center, size.toPx() / 2) }
         Avatar(photo, name, size, onClick = onClick)
-        Canvas(Modifier.fillMaxSize()) { frame.front(this, t, center, size.toPx() / 2) }
+        Canvas(Modifier.fillMaxSize()) {
+            val r = size.toPx() / 2
+            // Brillo interior: el color del marco "entra" un poco en la foto, con un leve pulso.
+            if (frame.accent.alpha > 0f) {
+                val pulse = 0.75f + 0.25f * kotlin.math.sin(t * 2 * PI.toFloat())
+                drawCircle(
+                    Brush.radialGradient(
+                        0.78f to Color.Transparent, 1f to frame.accent.copy(alpha = 0.55f * pulse),
+                        center = center, radius = r,
+                    ),
+                    r, center,
+                )
+            }
+            frame.front(this, t, center, r)
+        }
     }
 }
 
