@@ -1,7 +1,7 @@
 package com.sunless404.keeptrack
 
 import com.sunless404.keeptrack.data.SampleRoutine
-import com.sunless404.keeptrack.domain.ExternalAiPrompt
+import com.sunless404.keeptrack.domain.ImportFormats
 import com.sunless404.keeptrack.domain.RoutineParser
 import com.sunless404.keeptrack.domain.RoutineTemplates
 import com.sunless404.keeptrack.domain.RoutineText
@@ -37,10 +37,11 @@ class RoutineImportTest {
     }
 
     @Test
-    fun promptIncludesRequestAndFormat() {
-        val p = ExternalAiPrompt.build("Más gimnasio", SampleRoutine.blocks(), keepCurrent = true)
-        assertTrue(p.contains("Más gimnasio"))
-        assertTrue(p.contains("\"bloques\""))
-        assertTrue(p.contains("Dormir"))
+    fun formatSamplesImportWithoutErrors() {
+        ImportFormats.all.forEach { f ->
+            val r = RoutineParser.parse(f.sample)
+            assertTrue("${f.name}: ${r.errors}", r.errors.isEmpty())
+            assertTrue(f.name, r.blocks.isNotEmpty())
+        }
     }
 }

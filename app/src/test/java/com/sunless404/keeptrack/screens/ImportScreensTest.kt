@@ -14,7 +14,7 @@ import androidx.compose.ui.test.onRoot
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.sunless404.keeptrack.data.SampleRoutine
 import com.sunless404.keeptrack.domain.RoutineParser
-import com.sunless404.keeptrack.ui.edit.AiStep
+import com.sunless404.keeptrack.ui.edit.FileStep
 import com.sunless404.keeptrack.ui.edit.ImportMenu
 import com.sunless404.keeptrack.ui.edit.PreviewStep
 import com.sunless404.keeptrack.ui.edit.TemplatesStep
@@ -47,7 +47,7 @@ class ImportScreensTest {
         val screens: List<Pair<String, @Composable () -> Unit>> = listOf(
             "menu" to { ImportMenu(hasRoutine = true) {} },
             "texto" to { TextStep(onClose = {}) {} },
-            "ia" to { AiStep(SampleRoutine.blocks(), onClose = {}) {} },
+            "archivo" to { FileStep(onClose = {}) {} },
             "plantillas" to { TemplatesStep(onClose = {}) {} },
             "vista-previa" to {
                 PreviewStep(RoutineParser.parse(sample), "Texto", SampleRoutine.blocks(), true, {}, {}) { _, _ -> }

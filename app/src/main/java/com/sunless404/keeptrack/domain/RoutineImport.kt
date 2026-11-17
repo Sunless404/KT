@@ -126,25 +126,65 @@ object RoutineTemplates {
     )
 }
 
-/** Texto para pegar en cualquier IA (Gemini, ChatGPT…) y que responda en un formato que la app entiende. */
-object ExternalAiPrompt {
-    fun build(request: String, current: List<Block>, keepCurrent: Boolean): String = buildString {
-        appendLine("Actúa como planificador de rutinas semanales (lunes a domingo, formato 24 h).")
-        appendLine()
-        appendLine("Lo que quiero:")
-        appendLine(request.trim().ifEmpty { "Organiza una rutina semanal equilibrada." })
-        appendLine()
-        if (keepCurrent && current.isNotEmpty()) {
-            appendLine("Esta es mi rutina actual. Mantén lo que no te pida cambiar:")
-            appendLine(RoutineJson.encode(current).toString())
-            appendLine()
-        }
-        appendLine("Responde SOLO con un bloque de código JSON, sin explicaciones, con la rutina COMPLETA resultante:")
-        appendLine("""{"bloques": [{"titulo": "Gimnasio", "categoria": "gimnasio", "dias": ["lunes", "miercoles"], "inicio": "19:00", "fin": "20:30"}]}""")
-        appendLine("Reglas:")
-        appendLine("- \"dias\": lunes, martes, miercoles, jueves, viernes, sabado, domingo.")
-        appendLine("- \"inicio\" y \"fin\" en HH:MM. Si el fin es menor que el inicio, el bloque cruza la medianoche (dormir 23:00-07:00).")
-        appendLine("- \"categoria\": clase, academia, estudio, gimnasio, desplazamiento, comida, sueno, lectura, higiene, libre u otro.")
-        appendLine("- Agrupa en un bloque los días con la misma actividad y horario. No solapes bloques.")
-    }.trim()
+/** Formatos de archivo que entiende la importación, con una plantilla lista para copiar. */
+data class FileFormat(val name: String, val extension: String, val description: String, val sample: String)
+
+object ImportFormats {
+    val all = listOf(
+        FileFormat(
+            "JSON", ".json",
+            "Una lista de bloques. \"dias\", \"inicio\", \"fin\" y \"titulo\" son obligatorios; \"categoria\", \"notas\" y \"aviso\" son opcionales.",
+            """
+            {
+              "bloques": [
+                {
+                  "titulo": "Clases",
+                  "categoria": "clase",
+                  "dias": ["lunes", "martes", "miercoles", "jueves", "viernes"],
+                  "inicio": "08:00",
+                  "fin": "14:00"
+                },
+                {
+                  "titulo": "Gimnasio",
+                  "categoria": "gimnasio",
+                  "dias": ["martes", "jueves"],
+                  "inicio": "18:00",
+                  "fin": "19:30",
+                  "aviso": true
+                }
+              ]
+            }
+            """.trimIndent(),
+        ),
+        FileFormat(
+            "CSV por filas", ".csv",
+            "Una fila por bloque. Separado por comas o punto y coma, como lo guarda Excel o Google Sheets.",
+            """
+            Día;Inicio;Fin;Actividad;Categoría
+            Lunes a viernes;08:00;14:00;Clases;clase
+            Martes y jueves;18:00;19:30;Gimnasio;gimnasio
+            Todos los días;23:00;07:00;Dormir;sueno
+            """.trimIndent(),
+        ),
+        FileFormat(
+            "CSV en cuadrícula", ".csv",
+            "Como un horario de clase: una columna por día y una fila por franja horaria. Las celdas vacías se ignoran.",
+            """
+            Hora;Lunes;Martes;Miércoles;Jueves;Viernes
+            08:00-09:00;Matemáticas;Inglés;Matemáticas;Historia;Física
+            09:00-10:00;Lengua;Física;Química;Inglés;Lengua
+            """.trimIndent(),
+        ),
+        FileFormat(
+            "Texto", ".txt",
+            "El nombre del día y debajo sus bloques, o frases con el día y la hora. La categoría, opcional, entre corchetes.",
+            """
+            Lunes a viernes
+            08:00-14:00 Clases [clase]
+            16:00-18:00 Estudio
+
+            Gimnasio martes y jueves de 18 a 19:30
+            """.trimIndent(),
+        ),
+    )
 }

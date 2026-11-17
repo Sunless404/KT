@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -90,7 +91,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sunless404.keeptrack.data.Block
-import com.sunless404.keeptrack.domain.ExternalAiPrompt
+import com.sunless404.keeptrack.domain.ImportFormats
 import com.sunless404.keeptrack.domain.ParseResult
 import com.sunless404.keeptrack.domain.RoutineParser
 import com.sunless404.keeptrack.domain.RoutineTemplate
@@ -121,7 +122,7 @@ object SharedImport {
 /** Cómo se aplica lo importado. */
 enum class ImportMode { REPLACE_ALL, REPLACE_DAYS, ADD }
 
-private enum class Step { TEXT, AI, TEMPLATES, PREVIEW }
+private enum class Step { TEXT, FILE, TEMPLATES, PREVIEW }
 
 private const val MAX_FILE = 1_000_000
 
@@ -190,7 +191,7 @@ fun ImportFlow(
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         readText(context, uri)
-            .onSuccess { preview(it, "Archivo", Step.TEXT) }
+            .onSuccess { preview(it, "Archivo", Step.FILE) }
             .onFailure { fileError = it.message }
     }
 
@@ -205,8 +206,7 @@ fun ImportFlow(
                 choose {
                     when (option) {
                         MenuOption.TEXT -> step = Step.TEXT
-                        MenuOption.FILE -> picker.launch(arrayOf("text/*", "application/json", "application/csv", "application/vnd.ms-excel", "application/octet-stream"))
-                        MenuOption.AI -> step = Step.AI
+                        MenuOption.FILE -> step = Step.FILE
                         MenuOption.TEMPLATES -> step = Step.TEMPLATES
                         MenuOption.SHARE -> {
                             val send = Intent(Intent.ACTION_SEND).apply {
@@ -237,7 +237,7 @@ fun ImportFlow(
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            BackHandler { step = if (s == Step.PREVIEW && source != "Compartido desde otra app" && source != "Archivo") from else null }
+            BackHandler { step = if (s == Step.PREVIEW && source != "Compartido desde otra app") from else null }
             AnimatedContent(
                 s,
                 transitionSpec = {
@@ -249,7 +249,9 @@ fun ImportFlow(
             ) { st ->
                 when (st) {
                     Step.TEXT -> TextStep(onClose = { step = null }) { preview(it, "Texto", Step.TEXT) }
-                    Step.AI -> AiStep(current, onClose = { step = null }) { preview(it, "Respuesta de la IA", Step.AI) }
+                    Step.FILE -> FileStep(onClose = { step = null }) {
+                        picker.launch(arrayOf("text/*", "application/json", "application/csv", "application/vnd.ms-excel", "application/octet-stream"))
+                    }
                     Step.TEMPLATES -> TemplatesStep(onClose = { step = null }) { t ->
                         result = RoutineParser.parse(t.text)
                         source = "Plantilla «${t.name}»"
@@ -260,7 +262,7 @@ fun ImportFlow(
                         result = result ?: return@AnimatedContent,
                         source = source,
                         current = current,
-                        canGoBack = source != "Archivo" && source != "Compartido desde otra app",
+                        canGoBack = source != "Compartido desde otra app",
                         onBack = { step = from },
                         onClose = { step = null },
                         onApply = { blocks, mode -> onApply(blocks, mode); step = null },
@@ -271,7 +273,7 @@ fun ImportFlow(
     }
 }
 
-internal enum class MenuOption { TEXT, FILE, AI, TEMPLATES, SHARE }
+internal enum class MenuOption { TEXT, FILE, TEMPLATES, SHARE }
 
 /** Contenido de la hoja inferior con las formas de importar. */
 @Composable
@@ -284,8 +286,7 @@ internal fun ImportMenu(hasRoutine: Boolean, onPick: (MenuOption) -> Unit) {
         )
         Spacer(Modifier.height(4.dp))
         OptionRow(KtIcons.Paste, "Escribir o pegar", "Texto, tablas o frases como «Gimnasio lunes y jueves de 18 a 19:30»") { onPick(MenuOption.TEXT) }
-        OptionRow(KtIcons.File, "Abrir archivo", "TXT, CSV de Excel o Google Sheets, o JSON") { onPick(MenuOption.FILE) }
-        OptionRow(KtIcons.Assistant, "Con otra IA", "Gemini, ChatGPT… Copia las instrucciones y pega su respuesta") { onPick(MenuOption.AI) }
+        OptionRow(KtIcons.File, "Abrir archivo", "JSON, CSV de Excel o Google Sheets, o TXT. Con plantillas para copiar") { onPick(MenuOption.FILE) }
         OptionRow(KtIcons.Templates, "Plantillas", "Empieza con una rutina tipo y ajústala a tu gusto") { onPick(MenuOption.TEMPLATES) }
         if (hasRoutine) {
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
@@ -424,70 +425,62 @@ private fun NumberedCard(n: Int, title: String, content: @Composable ColumnScope
 }
 
 @Composable
-internal fun AiStep(current: List<Block>, onClose: () -> Unit, onReview: (String) -> Unit) {
-    val context = LocalContext.current
+internal fun FileStep(onClose: () -> Unit, onPick: () -> Unit) {
     val clipboard = LocalClipboardManager.current
-    var request by rememberSaveable { mutableStateOf("") }
-    var keep by rememberSaveable { mutableStateOf(current.isNotEmpty()) }
-    var copied by remember { mutableStateOf(false) }
-    var answer by rememberSaveable { mutableStateOf("") }
-    fun open(url: String) = runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-
+    var copied by remember { mutableStateOf<String?>(null) }
     StepScaffold(
-        "Con otra IA", onClose,
-        bottom = { Button(onClick = { onReview(answer) }, enabled = answer.isNotBlank(), modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Revisar") } },
+        "Abrir archivo", onClose,
+        bottom = {
+            Button(onClick = onPick, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                Icon(KtIcons.File, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Elegir archivo")
+            }
+        },
     ) {
         Text(
-            "Útil si el asistente no está disponible o prefieres otra IA. Funciona con cualquiera.",
+            "Elige un archivo del móvil, Drive o Descargas. Si aún no lo tienes, copia una de estas plantillas, " +
+                "rellénala (o pídesela a una IA) y guárdala como archivo.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        NumberedCard(1, "Di qué quieres") {
-            OutlinedTextField(
-                value = request, onValueChange = { request = it; copied = false },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp),
-                placeholder = { Text("Ej.: añade gimnasio tres tardes y deja libre el viernes por la tarde") },
-                textStyle = MaterialTheme.typography.bodyMedium,
-            )
-            if (current.isNotEmpty()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Partir de mi rutina actual", style = MaterialTheme.typography.bodyMedium)
-                        Text("La IA la recibe y solo cambia lo que pidas", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ImportFormats.all.forEach { f ->
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(f.name, style = MaterialTheme.typography.titleMedium)
+                            Text(f.extension, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                        OutlinedButton(
+                            onClick = { clipboard.setText(AnnotatedString(f.sample)); copied = f.name },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Icon(if (copied == f.name) Icons.Default.Check else KtIcons.Paste, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (copied == f.name) "Copiado" else "Copiar")
+                        }
                     }
-                    Switch(checked = keep, onCheckedChange = { keep = it; copied = false })
+                    Text(f.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // Como un editor de código: sin cortar líneas, con scroll horizontal.
+                    Box(
+                        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                            .horizontalScroll(rememberScrollState()).padding(10.dp),
+                    ) {
+                        Text(f.sample, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace), softWrap = false)
+                    }
                 }
             }
         }
-        NumberedCard(2, "Copia las instrucciones y ábrelas en tu IA") {
-            Button(
-                onClick = {
-                    clipboard.setText(AnnotatedString(ExternalAiPrompt.build(request, current, keep)))
-                    copied = true
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(if (copied) Icons.Default.Check else KtIcons.Paste, null, Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(if (copied) "Copiadas" else "Copiar instrucciones")
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { open("https://gemini.google.com/app") }, modifier = Modifier.weight(1f)) { Text("Abrir Gemini") }
-                OutlinedButton(onClick = { open("https://chatgpt.com/") }, modifier = Modifier.weight(1f)) { Text("Abrir ChatGPT") }
-            }
-            Text("Pega el texto en el chat y envíalo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        NumberedCard(3, "Pega aquí su respuesta") {
-            OutlinedTextField(
-                value = answer, onValueChange = { answer = it },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
-                placeholder = { Text("Copia la respuesta completa de la IA y pégala aquí") },
-                textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PasteChip { answer = it }
-                if (answer.isNotEmpty()) TextButton(onClick = { answer = "" }) { Text("Borrar") }
-            }
-        }
+        Text(
+            "Categorías: clase, academia, estudio, gimnasio, desplazamiento, comida, sueno, lectura, higiene, libre u otro. " +
+                "Si no la pones, se deduce del nombre.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
