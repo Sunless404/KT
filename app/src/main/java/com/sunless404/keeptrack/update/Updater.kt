@@ -60,41 +60,50 @@ class Updater(private val app: App) {
 
     private val dir get() = File(app.cacheDir, "updates").apply { mkdirs() }
 
-    /** Comprueba como mucho cada 30 min; [force] ignora ese margen y lo pospuesto. */
-    suspend fun check(force: Boolean = false) {
+    private var lastCheck = 0L
+    /** Versión aplazada con "Más tarde": no se vuelve a ofrecer hasta que se reinicie la app. */
+    private var postponedVersion = 0
+
+    /**
+     * Consulta la última versión publicada. Se llama cada vez que se abre o se vuelve a
+     * la app (con un margen de 1 min para no repetir); [force] lo hace siempre.
+     * Devuelve null si va bien, o el motivo si no se pudo comprobar.
+     */
+    suspend fun check(force: Boolean = false): String? {
         val now = System.currentTimeMillis()
-        val sp = app.prefs.sp
-        if (!force && now - sp.getLong("updateCheckedAt", 0) < 30 * 60_000L) return
-        sp.edit().putLong("updateCheckedAt", now).apply()
-        val release = withContext(Dispatchers.IO) {
+        if (!force && now - lastCheck < 60_000L) return null
+        val result = withContext(Dispatchers.IO) {
             runCatching {
                 val c = URL(LATEST).openConnection() as HttpURLConnection
                 c.connectTimeout = 10_000
                 c.readTimeout = 15_000
                 c.setRequestProperty("Accept", "application/vnd.github+json")
+                // La API de GitHub rechaza peticiones sin User-Agent.
+                c.setRequestProperty("User-Agent", "KeepTrack/${BuildConfig.VERSION_NAME}")
                 try {
-                    if (c.responseCode != 200) null else ReleaseParser.parse(c.inputStream.use { it.readBytes().decodeToString() })
+                    if (c.responseCode != 200) error("GitHub respondió ${c.responseCode}")
+                    ReleaseParser.parse(c.inputStream.use { it.readBytes().decodeToString() }) ?: error("no hay ningún APK publicado")
                 } finally {
                     c.disconnect()
                 }
-            }.getOrNull()
-        } ?: return
+            }
+        }
+        val release = result.getOrElse { return "No se pudo comprobar: ${it.message}" }
+        // Solo cuenta como comprobado si ha ido bien.
+        lastCheck = now
         // Las versiones antiguas descargadas ya no sirven.
         dir.listFiles()?.forEach { if (!it.name.contains("-${release.versionCode}.")) it.delete() }
-        val postponed = sp.getInt("updatePostponed", 0) == release.versionCode &&
-            now - sp.getLong("updatePostponedAt", 0) < 24 * 3600_000L
-        if (release.versionCode > BuildConfig.VERSION_CODE && (force || !postponed)) {
+        val busy = _state.value is UpdateState.Downloading || _state.value is UpdateState.ReadyToInstall
+        if (release.versionCode > BuildConfig.VERSION_CODE && !busy && (force || release.versionCode != postponedVersion)) {
             _state.value = UpdateState.Available(release)
         }
+        return null
     }
 
-    /** "Más tarde": no vuelve a preguntar por esta versión en 24 h. */
+    /** "Más tarde": no vuelve a preguntar por esta versión hasta la próxima vez que se abra la app. */
     fun postpone() {
         val s = _state.value
-        if (s is UpdateState.Available) {
-            app.prefs.sp.edit().putInt("updatePostponed", s.release.versionCode)
-                .putLong("updatePostponedAt", System.currentTimeMillis()).apply()
-        }
+        if (s is UpdateState.Available) postponedVersion = s.release.versionCode
         _state.value = UpdateState.Idle
     }
 

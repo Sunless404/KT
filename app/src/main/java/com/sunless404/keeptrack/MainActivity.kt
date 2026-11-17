@@ -204,16 +204,18 @@ private fun CloudChoiceDialog() {
 private fun VersionSection() {
     val app = LocalContext.current.applicationContext as App
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    var checked by androidx.compose.runtime.remember { mutableStateOf(false) }
+    var result by androidx.compose.runtime.remember { mutableStateOf<String?>(null) }
+    var busy by androidx.compose.runtime.remember { mutableStateOf(false) }
     Text("Versión", style = MaterialTheme.typography.titleMedium)
     Text("KeepTrack ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
-    androidx.compose.material3.OutlinedButton(onClick = {
+    androidx.compose.material3.OutlinedButton(enabled = !busy, onClick = {
+        busy = true
+        result = null
         scope.launch {
-            app.updater.check(force = true)
-            checked = true
+            val error = app.updater.check(force = true)
+            result = error ?: if (app.updater.state.value is com.sunless404.keeptrack.update.UpdateState.Idle) "Tienes la última versión." else null
+            busy = false
         }
-    }) { Text("Buscar actualizaciones") }
-    if (checked && app.updater.state.collectAsState().value is com.sunless404.keeptrack.update.UpdateState.Idle) {
-        Text("Tienes la última versión.", style = MaterialTheme.typography.bodySmall)
-    }
+    }) { Text(if (busy) "Comprobando…" else "Buscar actualizaciones") }
+    result?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 }
