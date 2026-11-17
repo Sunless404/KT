@@ -127,37 +127,116 @@ object ImageFrames {
     /** Susanoo azul: la armadura gira sobre su eje y las llamas ondean sin parar. */
     val susanooBlue = FrameStyle(
         id = "susanoo_azul", name = "Susanoo azul", collection = "Susanoo",
-        accent = SPECTRAL_BLUE, scale = 2.4f, period = 12000,
+        accent = SPECTRAL_BLUE, scale = 2.4f, period = 24000,
         images = listOf(R.drawable.frame_susanoo_blue_armor, R.drawable.frame_susanoo_blue_glow, R.drawable.frame_susanoo_blue_flames),
         backImages = { t, c, r, img ->
-            bloom(c, r * 2.2f, SPECTRAL_BLUE, 0.3f + 0.1f * sin(t * TAU * 3))
+            bloom(c, r * 2.2f, SPECTRAL_BLUE, 0.3f + 0.1f * sin(t * TAU * 6))
             fire(c, r * 1.85f, t, SPECTRAL_BLUE.copy(alpha = 0.5f), SPECTRAL_BLUE.copy(alpha = 0.4f), SPECTRAL_CYAN.copy(alpha = 0.35f),
-                count = 26, len = r * 0.45f, speed = 4f)
-            flipbook(img[2], 16, 4, t * 7, c, 2 * r * 0.98f / SUSANOO_BLUE_HOLE)
+                count = 26, len = r * 0.45f, speed = 8f)
+            flipbook(img[2], 16, 4, t * 14, c, 2 * r * 0.98f / SUSANOO_BLUE_HOLE)
         },
         frontImages = { t, c, r, img ->
             val rot = t * 360f
             ringImage(img[0], c, r, SUSANOO_BLUE_HOLE, degrees = rot)
-            ringImage(img[1], c, r, SUSANOO_BLUE_HOLE, degrees = rot, alpha = 0.2f + 0.3f * (0.5f + 0.5f * sin(t * TAU * 6)), blend = BlendMode.Plus)
-            embers(Offset(c.x, c.y + r * 0.5f), r * 1.9f, frac(t * 3), 16, SPECTRAL_CYAN.copy(alpha = 0.9f), size = r * 0.022f, height = r * 1.7f)
+            ringImage(img[1], c, r, SUSANOO_BLUE_HOLE, degrees = rot, alpha = 0.2f + 0.3f * (0.5f + 0.5f * sin(t * TAU * 12)), blend = BlendMode.Plus)
+            embers(Offset(c.x, c.y + r * 0.5f), r * 1.9f, frac(t * 6), 16, SPECTRAL_CYAN.copy(alpha = 0.9f), size = r * 0.022f, height = r * 1.7f)
         },
     )
 
-    /** Susanoo morado: costillas quietas y llamas violetas vivas alrededor. */
-    val susanooPurple = FrameStyle(
-        id = "susanoo_morado", name = "Susanoo morado", collection = "Susanoo",
-        accent = SPECTRAL_PURPLE, scale = 2.3f,
-        images = listOf(R.drawable.frame_susanoo_purple_armor, R.drawable.frame_susanoo_purple_glow, R.drawable.frame_susanoo_purple_flames),
+    private val PURPLE_IMAGES = listOf(R.drawable.frame_susanoo_purple_armor, R.drawable.frame_susanoo_purple_glow, R.drawable.frame_susanoo_purple_flames)
+
+    /** Llamas del anillo morado sin ondular (primer fotograma de la hoja). */
+    private fun DrawScope.purpleFlames(img: ImageBitmap, c: Offset, r: Float, grow: Float = 1f, alpha: Float = 1f, degrees: Float = 0f, dy: Float = 0f, blend: BlendMode = BlendMode.SrcOver) {
+        val size = img.width / 4
+        piece(img, 0.5f, 0.5f, Offset(c.x, c.y + dy), 2 * r * 0.98f / SUSANOO_PURPLE_HOLE * grow, degrees = degrees, alpha = alpha, blend = blend,
+            src = IntOffset.Zero, srcSize = IntSize(size, size))
+    }
+
+    private fun DrawScope.purpleArmor(img: List<ImageBitmap>, c: Offset, r: Float, glow: Float) {
+        ringImage(img[0], c, r, SUSANOO_PURPLE_HOLE)
+        ringImage(img[1], c, r, SUSANOO_PURPLE_HOLE, alpha = glow, blend = BlendMode.Plus)
+    }
+
+    /** A · Llamarada: copias de las llamas que suben, crecen y se desvanecen, sin fin. */
+    val susanooPurpleRise = FrameStyle(
+        id = "susanoo_morado_a", name = "A · Llamarada", collection = "Susanoo",
+        accent = SPECTRAL_PURPLE, scale = 2.3f, images = PURPLE_IMAGES,
         backImages = { t, c, r, img ->
-            bloom(c, r * 2.1f, SPECTRAL_PURPLE, 0.3f + 0.12f * sin(t * TAU))
-            fire(c, r * 1.55f, t, SPECTRAL_PURPLE.copy(alpha = 0.45f), SPECTRAL_PURPLE.copy(alpha = 0.35f), SPECTRAL_LILAC.copy(alpha = 0.3f),
-                count = 22, len = r * 0.5f, speed = 1.6f, from = PI_F * 1.05f, to = PI_F * 1.95f)
-            flipbook(img[2], 16, 4, t * 2, c, 2 * r * 0.98f / SUSANOO_PURPLE_HOLE)
+            bloom(c, r * 2.1f, SPECTRAL_PURPLE, 0.3f + 0.12f * sin(t * TAU * 2))
+            purpleFlames(img[2], c, r, alpha = 0.75f)
+            for (i in 0 until 3) {
+                val p = frac(t * 2 + i / 3f)
+                purpleFlames(img[2], c, r, grow = 1f + 0.08f * p, dy = -r * 0.3f * p, alpha = 0.7f * sin(p * PI_F), blend = BlendMode.Plus)
+            }
         },
         frontImages = { t, c, r, img ->
+            purpleArmor(img, c, r, 0.25f + 0.25f * (0.5f + 0.5f * sin(t * TAU * 2)))
+            embers(Offset(c.x, c.y + r * 0.3f), r * 1.6f, t, 18, SPECTRAL_LILAC.copy(alpha = 0.9f), size = r * 0.022f, height = r * 1.8f)
+        },
+    )
+
+    /** B · Fuego vivo: las llamas son de código, con lenguas que nacen y mueren alrededor. */
+    val susanooPurpleFire = FrameStyle(
+        id = "susanoo_morado_b", name = "B · Fuego vivo", collection = "Susanoo",
+        accent = SPECTRAL_PURPLE, scale = 2.3f, images = PURPLE_IMAGES,
+        backImages = { t, c, r, _ ->
+            bloom(c, r * 2.1f, SPECTRAL_PURPLE, 0.35f + 0.1f * sin(t * TAU * 2))
+            fire(c, r * 1.35f, t, Color(0xFF5B1FD1).copy(alpha = 0.7f), SPECTRAL_PURPLE.copy(alpha = 0.6f), SPECTRAL_LILAC.copy(alpha = 0.5f),
+                count = 30, len = r * 0.75f, speed = 2f, width = 0.11f)
+            fire(c, r * 1.35f, t + 0.37f, SPECTRAL_PURPLE.copy(alpha = 0.4f), SPECTRAL_LILAC.copy(alpha = 0.35f), Color.White.copy(alpha = 0.3f),
+                count = 18, len = r * 0.55f, speed = 3f, from = PI_F, to = PI_F * 2f, width = 0.09f)
+        },
+        frontImages = { t, c, r, img ->
+            purpleArmor(img, c, r, 0.3f + 0.2f * sin(t * TAU * 4))
+            embers(Offset(c.x, c.y + r * 0.3f), r * 1.6f, t, 18, SPECTRAL_LILAC.copy(alpha = 0.9f), size = r * 0.022f, height = r * 1.8f)
+        },
+    )
+
+    /** C · Pulso de chakra: cada latido lanza una onda, aviva las llamas y recorre las costillas de luz. */
+    val susanooPurplePulse = FrameStyle(
+        id = "susanoo_morado_c", name = "C · Pulso de chakra", collection = "Susanoo",
+        accent = SPECTRAL_PURPLE, scale = 2.3f, images = PURPLE_IMAGES,
+        backImages = { t, c, r, img ->
+            val p = frac(t * 2)
+            val flare = (1 - p) * (1 - p)
+            bloom(c, r * 2.1f, SPECTRAL_PURPLE, 0.25f + 0.3f * flare)
+            purpleFlames(img[2], c, r, grow = 1f + 0.06f * flare)
+            purpleFlames(img[2], c, r, grow = 1f + 0.06f * flare, alpha = 0.8f * flare, blend = BlendMode.Plus)
+            // Onda que se expande.
+            drawCircle(SPECTRAL_LILAC.copy(alpha = 0.6f * (1 - p)), r * (1.3f + 0.9f * p), c, style = Stroke(r * 0.05f * (1 - p) + 1f), blendMode = BlendMode.Plus)
+        },
+        frontImages = { t, c, r, img ->
+            val p = frac(t * 2)
             ringImage(img[0], c, r, SUSANOO_PURPLE_HOLE)
-            ringImage(img[1], c, r, SUSANOO_PURPLE_HOLE, alpha = 0.2f + 0.35f * (0.5f + 0.5f * sin(t * TAU * 2)), blend = BlendMode.Plus)
-            embers(Offset(c.x, c.y + r * 0.5f), r * 1.7f, t, 16, SPECTRAL_LILAC.copy(alpha = 0.9f), size = r * 0.022f, height = r * 1.6f)
+            // La luz sube por las costillas, de abajo arriba, tras cada latido.
+            val y = c.y + r * 1.6f - r * 3.2f * p
+            val ringW = 2 * r * 0.98f / SUSANOO_PURPLE_HOLE
+            drawContext.canvas.saveLayer(androidx.compose.ui.geometry.Rect(Offset.Zero, size), androidx.compose.ui.graphics.Paint())
+            ringImage(img[1], c, r, SUSANOO_PURPLE_HOLE)
+            drawRect(
+                androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(Color.Transparent, Color.White, Color.Transparent), y - r * 0.5f, y + r * 0.5f,
+                ),
+                Offset(c.x - ringW, c.y - ringW), androidx.compose.ui.geometry.Size(ringW * 2, ringW * 2), blendMode = BlendMode.DstIn,
+            )
+            drawContext.canvas.restore()
+            ringImage(img[1], c, r, SUSANOO_PURPLE_HOLE, alpha = 0.15f + 0.3f * (1 - p) * (1 - p), blend = BlendMode.Plus)
+            embers(Offset(c.x, c.y + r * 0.3f), r * 1.6f, t, 14, SPECTRAL_LILAC.copy(alpha = 0.9f), size = r * 0.022f, height = r * 1.8f)
+        },
+    )
+
+    /** D · Torbellino: las llamas giran alrededor del anillo como un remolino de chakra. */
+    val susanooPurpleVortex = FrameStyle(
+        id = "susanoo_morado_d", name = "D · Torbellino", collection = "Susanoo",
+        accent = SPECTRAL_PURPLE, scale = 2.3f, period = 8000, images = PURPLE_IMAGES,
+        backImages = { t, c, r, img ->
+            bloom(c, r * 2.1f, SPECTRAL_PURPLE, 0.3f + 0.12f * sin(t * TAU * 2))
+            purpleFlames(img[2], c, r, degrees = t * 360f)
+            purpleFlames(img[2], c, r, grow = 1.04f, degrees = -t * 360f + 90f, alpha = 0.45f, blend = BlendMode.Plus)
+        },
+        frontImages = { t, c, r, img ->
+            purpleArmor(img, c, r, 0.25f + 0.25f * (0.5f + 0.5f * sin(t * TAU * 4)))
+            sparks(c, r * 1.55f, t * 2, SPECTRAL_LILAC, n = 18, speed = 1f, swirl = true, size = r * 0.02f)
         },
     )
 
@@ -167,5 +246,5 @@ object ImageFrames {
     private const val SUSANOO_PURPLE_HOLE = 0.4316f
     private val PI_F = Math.PI.toFloat()
 
-    val all = listOf(alucardCromwell, susanooBlue, susanooPurple)
+    val all = listOf(susanooBlue, susanooPurpleRise, susanooPurpleFire, susanooPurplePulse, susanooPurpleVortex, alucardCromwell)
 }
