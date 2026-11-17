@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import com.sunless404.keeptrack.App
 import com.sunless404.keeptrack.cloud.CloudException
 import com.sunless404.keeptrack.cloud.LeaderRow
+import com.sunless404.keeptrack.ui.common.Avatar
+import com.sunless404.keeptrack.ui.common.appear
 import com.sunless404.keeptrack.ui.theme.Brand
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -164,7 +166,7 @@ fun AccountPanel(intro: String) {
 }
 
 @Composable
-private fun SignInForm(
+internal fun SignInForm(
     intro: String,
     busy: Boolean,
     message: String?,
@@ -264,11 +266,16 @@ fun FriendsLeaderboard(weekly: Boolean) {
                         color = if (i == 0) Brand.Fire else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(36.dp),
                     )
-                    Text(
-                        "@${r.username}" + if (r.isMe) " (tú)" else "",
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Avatar(r.photo, r.displayName.ifBlank { r.username }, 36.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            r.displayName.ifBlank { r.username } + if (r.isMe) " (tú)" else "",
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                        )
+                        Text("@${r.username}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     Text(if (weekly) "${r.weekPoints} pts" else "${r.strength}", style = MaterialTheme.typography.titleMedium)
                     if (!r.isMe) {
                         IconButton(onClick = {

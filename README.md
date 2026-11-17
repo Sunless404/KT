@@ -41,11 +41,15 @@ si no coincide. Si ocurre, exporta una copia de seguridad, desinstala e instala.
 
 ## Primer arranque
 
-1. La app trae una rutina de ejemplo. Cámbiala desde Rutina o pídeselo al Asistente.
-2. En la pantalla Hoy aparece una tarjeta de permisos. Concede notificaciones,
-   alarmas exactas y la exclusión de la optimización de batería; sin ellos los
-   avisos pueden no llegar o llegar tarde.
-3. Para el widget: mantén pulsada la pantalla de inicio > Widgets > KeepTrack.
+1. Al abrir la app puedes entrar con tu cuenta, crear una o seguir como invitado
+   (todo se queda en el móvil; la cuenta se puede crear después desde el Perfil).
+2. La app trae una rutina de ejemplo. Cámbiala desde Rutina o pídeselo al Asistente.
+3. En Hoy aparece una tarjeta de permisos: concede notificaciones, alarmas exactas
+   y la exclusión de la optimización de batería, o los avisos pueden no llegar.
+4. Para el widget: mantén pulsada la pantalla de inicio > Widgets > KeepTrack.
+
+En cada apartado, el botón «?» explica brevemente cómo usarlo, y la foto de
+arriba a la derecha abre tu Perfil.
 
 ## Pantallas
 
@@ -61,8 +65,13 @@ si no coincide. Si ocurre, exporta una copia de seguridad, desinstala e instala.
 - **Rutina**: lunes a domingo; al tocar un día se despliega su rutina para
   añadir, modificar, duplicar o borrar bloques y copiar el día en otros.
 - **Asistente**: chat con IA (texto, fotos de la galería o la cámara y notas de voz).
-- **Ajustes** (rueda en Hoy): avisos, horas de silencio, permisos, clave de la IA y
-  copia de seguridad.
+- **Perfil** (foto arriba a la derecha): foto de la galería, nombre visible,
+  biografía, estadísticas destacadas, logros y la cuenta.
+- **Ajustes** (rueda en Perfil): avisos, horas de silencio, permisos, cuenta,
+  clave de la IA y copia de seguridad.
+
+Rachas: cuanto más larga, más "arde" el icono: Chispa (1 día), Llama (3),
+Hoguera (7), Incendio (14) y Leyenda (30), con halo, llama y chispas.
 
 ## Gimnasio (sección secreta)
 
@@ -137,7 +146,9 @@ basta con esperar.
 Opcional. Con una cuenta (correo, contraseña y nombre de usuario) tus datos se
 guardan en la nube y puedes competir con tus amigos en el gimnasio.
 
-- Se entra desde Ajustes > Cuenta y nube, o desde Gimnasio > Clasificación.
+- Se entra al abrir la app, desde Perfil o desde Gimnasio > Clasificación.
+- Tu nombre visible, biografía y foto (256 px, guardada en tu perfil de Firestore)
+  los ven tus amigos en la clasificación.
 - Sincronización: unos segundos después de cada cambio se sube una copia
   completa (rutina, tareas, historial, gimnasio y ajustes) a tu cuenta. Al
   iniciar sesión en un móvil donde ya hay datos, la app pregunta si te quedas
@@ -158,7 +169,7 @@ guardan en la nube y puedes competir con tus amigos en el gimnasio.
 
 Datos en Firestore:
 
-- `users/{uid}`: perfil público (usuario, puntos de la semana, fuerza).
+- `users/{uid}`: perfil público (usuario, nombre, biografía, foto, puntos y fuerza).
 - `users/{uid}/friends/{uid}`: amigos que has añadido (privado).
 - `users/{uid}/sync/*`: copia de tus datos comprimida (privado).
 - `usernames/{usuario}`: garantiza que cada nombre de usuario es único.

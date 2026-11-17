@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -65,7 +66,10 @@ import com.sunless404.keeptrack.domain.GymSummary
 import com.sunless404.keeptrack.domain.dayName
 import com.sunless404.keeptrack.domain.fmtShortDate
 import com.sunless404.keeptrack.ui.account.FriendsLeaderboard
+import com.sunless404.keeptrack.ui.common.HelpButton
+import com.sunless404.keeptrack.ui.common.HelpTexts
 import com.sunless404.keeptrack.ui.common.KtIcons
+import com.sunless404.keeptrack.ui.common.appear
 import com.sunless404.keeptrack.ui.theme.Brand
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -116,7 +120,7 @@ fun GymScreen(vm: GymViewModel, onBack: () -> Unit) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver") }
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text("Gimnasio", style = MaterialTheme.typography.headlineMedium)
                         Text(
                             "Has encontrado la sección secreta",
@@ -124,9 +128,10 @@ fun GymScreen(vm: GymViewModel, onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
+                    HelpButton("Gimnasio", HelpTexts.GYM)
                 }
             }
-            item { Header(ui.summary) }
+            item { Box(Modifier.appear(0)) { Header(ui.summary) } }
             item {
                 PrimaryTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surface) {
                     listOf("Sesiones", "Récords", "Clasificación").forEachIndexed { i, t ->
@@ -143,8 +148,8 @@ fun GymScreen(vm: GymViewModel, onBack: () -> Unit) {
                             modifier = Modifier.padding(8.dp),
                         )
                     }
-                    items(ui.sessions, key = { it.id }) { s ->
-                        SessionCard(s, ui.sets[s.id].orEmpty()) { editing = s to ui.sets[s.id].orEmpty() }
+                    itemsIndexed(ui.sessions, key = { _, s -> s.id }) { i, s ->
+                        Box(Modifier.animateItem().appear(1 + i)) { SessionCard(s, ui.sets[s.id].orEmpty()) { editing = s to ui.sets[s.id].orEmpty() } }
                     }
                 }
                 1 -> {

@@ -30,6 +30,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import com.sunless404.keeptrack.domain.Habit
+import com.sunless404.keeptrack.domain.StreakLevel
+import com.sunless404.keeptrack.ui.common.HelpTexts
+import com.sunless404.keeptrack.ui.common.TopActions
+import com.sunless404.keeptrack.ui.common.appear
 import com.sunless404.keeptrack.ui.common.KtIcons
 import com.sunless404.keeptrack.ui.common.ProgressRing
 import com.sunless404.keeptrack.ui.common.SectionLabel
@@ -119,7 +123,7 @@ class StatsViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 @Composable
-fun StatsScreen(vm: StatsViewModel, onOpenGym: () -> Unit) {
+fun StatsScreen(vm: StatsViewModel, onOpenGym: () -> Unit, onOpenProfile: () -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     // Se activa al entrar: las animaciones arrancan desde cero.
     var shown by remember { mutableStateOf(false) }
@@ -131,13 +135,9 @@ fun StatsScreen(vm: StatsViewModel, onOpenGym: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Column(Modifier.padding(start = 4.dp, top = 8.dp)) {
-                Text("Estadísticas", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    "Rachas, horas y semanas anteriores",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                TopActions("Estadísticas", HelpTexts.STATS, onOpenProfile)
             }
         }
         item { SectionLabel("Rachas") }
@@ -178,6 +178,7 @@ fun StatsScreen(vm: StatsViewModel, onOpenGym: () -> Unit) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                 shape = MaterialTheme.shapes.large,
+                modifier = Modifier.appear(5),
             ) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
@@ -205,7 +206,7 @@ fun StatsScreen(vm: StatsViewModel, onOpenGym: () -> Unit) {
         item { SectionLabel("Historial de semanas") }
         if (ui.history.isEmpty()) item { Text("Aún no hay semanas registradas.", style = MaterialTheme.typography.bodySmall) }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), shape = MaterialTheme.shapes.large) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer), shape = MaterialTheme.shapes.large, modifier = Modifier.appear(6)) {
                 Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     ui.history.forEach { w ->
                         val m = LocalDate.ofEpochDay(w.mondayEpoch)
@@ -233,41 +234,56 @@ fun StatsScreen(vm: StatsViewModel, onOpenGym: () -> Unit) {
 @Composable
 private fun StreakCard(s: Streak, visible: Boolean, delayMs: Int, onClick: (() -> Unit)?, modifier: Modifier) {
     val count by animateIntAsState(if (visible) s.current else 0, tween(900, delayMs, FastOutSlowInEasing), label = "racha")
-    val appear by animateFloatAsState(if (visible) 1f else 0f, tween(450, delayMs), label = "aparece")
-    val pulse = rememberInfiniteTransition(label = "llama")
-    val scale by pulse.animateFloat(
-        initialValue = 1f, targetValue = if (s.current > 0) 1.15f else 1f,
-        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "escala",
-    )
-    val color = s.habit.category.composeColor
+    val level = StreakLevel.of(s.current)
+    val levelColor = Color(level.color)
+    val toNext by animateFloatAsState(if (visible) StreakLevel.progress(s.current) else 0f, tween(1000, delayMs + 200, FastOutSlowInEasing), label = "nivel")
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         shape = MaterialTheme.shapes.large,
         modifier = modifier
-            .graphicsLayer { alpha = appear; translationY = (1 - appear) * 40f }
+            .appear(delayMs / 90)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(s.habit.label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f), maxLines = 1)
-                Icon(
+                Column(Modifier.weight(1f)) {
+                    Text(s.habit.label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                    Text(
+                        level.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (s.current > 0) levelColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                StreakIcon(
                     when (s.habit) {
                         Habit.ESTUDIO -> KtIcons.Study
                         Habit.GIMNASIO -> KtIcons.Dumbbell
                         Habit.LECTURA -> KtIcons.Book
                         Habit.SUENO -> KtIcons.Bed
                     },
-                    null,
-                    tint = if (s.current > 0) color else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(24.dp).scale(scale),
+                    s.current,
+                    idle = MaterialTheme.colorScheme.outline,
+                    size = 48.dp,
                 )
             }
-            Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.Bottom) {
-                Text("$count", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = color)
+                Text(
+                    "$count", style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold,
+                    color = if (s.current > 0) levelColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Text(if (s.current == 1) " día" else " días", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 6.dp))
             }
-            Text("Mejor: ${s.best}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val next = level.next
+            Box(Modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(toNext).clip(CircleShape).background(levelColor))
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (next != null) "${next.minDays - s.current} para ${next.label} · mejor ${s.best}" else "Nivel máximo · mejor ${s.best}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
         }
     }
 }

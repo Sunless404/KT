@@ -59,6 +59,11 @@ class Prefs(context: Context) {
         get() = sp.getString("aiModel", null) ?: com.sunless404.keeptrack.ai.Gemini.DEFAULT_MODEL
         set(v) = sp.edit().putString("aiModel", v).apply()
 
+    /** Ha elegido usar la app sin cuenta. */
+    var guest: Boolean
+        get() = sp.getBoolean("guest", false)
+        set(v) = sp.edit().putBoolean("guest", v).apply()
+
     fun inQuietHours(minOfDay: Int): Boolean {
         if (!quietEnabled || quietStartMin == quietEndMin) return false
         return if (quietStartMin < quietEndMin) minOfDay in quietStartMin until quietEndMin

@@ -1,6 +1,7 @@
 package com.sunless404.keeptrack.screens
 
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -42,6 +43,11 @@ class ScreenshotTest {
 
     @Test
     fun pantallas() {
+        shot("0-entrar")
+        // Sin Firebase (como en Robolectric) la app entra directamente como invitado.
+        rule.onAllNodesWithText("Entrar como invitado").fetchSemanticsNodes().firstOrNull()?.let {
+            rule.onAllNodesWithText("Entrar como invitado")[0].performClick()
+        }
         shot("1-hoy")
         tab("Tareas"); shot("2-tareas")
         tab("Estadísticas"); shot("3-estadisticas")
@@ -49,5 +55,7 @@ class ScreenshotTest {
         tab("Asistente"); shot("5-asistente")
         tab("Estadísticas"); settle()
         rule.onAllNodesWithText("Gimnasio")[0].performClick(); shot("6-gimnasio")
+        tab("Hoy"); settle()
+        rule.onAllNodesWithContentDescription("Perfil")[0].performClick(); shot("7-perfil")
     }
 }

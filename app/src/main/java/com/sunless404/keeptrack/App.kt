@@ -5,6 +5,7 @@ import com.sunless404.keeptrack.ai.SecretStore
 import com.sunless404.keeptrack.cloud.Cloud
 import com.sunless404.keeptrack.data.AppDatabase
 import com.sunless404.keeptrack.data.Prefs
+import com.sunless404.keeptrack.data.ProfileStore
 import com.sunless404.keeptrack.data.Repository
 import com.sunless404.keeptrack.data.SampleRoutine
 import com.sunless404.keeptrack.notify.Alarms
@@ -25,6 +26,8 @@ class App : Application() {
         private set
     lateinit var cloud: Cloud
         private set
+    lateinit var profile: ProfileStore
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -32,7 +35,9 @@ class App : Application() {
         repo = Repository(AppDatabase.create(this))
         alarms = Alarms(this)
         secrets = SecretStore(prefs.sp)
+        profile = ProfileStore(this, prefs)
         cloud = Cloud(this)
+        profile.onChanged = { cloud.pushProfile(it) }
         repo.onChanged = {
             scope.launch { alarms.sync() }
             cloud.scheduleUpload()

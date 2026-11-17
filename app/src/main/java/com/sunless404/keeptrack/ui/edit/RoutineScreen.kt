@@ -65,14 +65,16 @@ import com.sunless404.keeptrack.domain.conflictsOf
 import com.sunless404.keeptrack.domain.dayName
 import com.sunless404.keeptrack.domain.fmtDuration
 import com.sunless404.keeptrack.domain.fmtTime
-import com.sunless404.keeptrack.ui.common.DayStrip
+import com.sunless404.keeptrack.ui.common.HelpTexts
+import com.sunless404.keeptrack.ui.common.TopActions
+import com.sunless404.keeptrack.ui.common.appear
 import com.sunless404.keeptrack.ui.common.KtIcons
 import com.sunless404.keeptrack.ui.common.composeColor
 import java.time.LocalDate
 
 /** Rutina semanal: lista de lunes a domingo; cada día se despliega con su línea de tiempo. */
 @Composable
-fun RoutineScreen(vm: EditViewModel) {
+fun RoutineScreen(vm: EditViewModel, onOpenProfile: () -> Unit) {
     val blocks by vm.blocks.collectAsStateWithLifecycle()
     val today = LocalDate.now().dayOfWeek.value
     var expanded by rememberSaveable { mutableStateOf(setOf(today)) }
@@ -86,18 +88,15 @@ fun RoutineScreen(vm: EditViewModel) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Column(Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)) {
-                Text("Rutina", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    "Tu plantilla semanal. Toca un día para verla y editarla.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                TopActions("Rutina", HelpTexts.ROUTINE, onOpenProfile)
             }
         }
         items((1..7).toList(), key = { it }) { day ->
             val list = blocks.filter { it.dayOfWeek == day }.sortedBy { it.startMin }
             DayCard(
+                modifier = Modifier.appear(day),
                 day = day,
                 isToday = day == today,
                 blocks = list,
@@ -144,6 +143,7 @@ fun RoutineScreen(vm: EditViewModel) {
 
 @Composable
 private fun DayCard(
+    modifier: Modifier,
     day: Int,
     isToday: Boolean,
     blocks: List<Block>,
@@ -163,7 +163,7 @@ private fun DayCard(
             containerColor = if (isToday) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer,
         ),
         shape = MaterialTheme.shapes.large,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column(Modifier.clickable(onClick = onToggle).padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -192,13 +192,13 @@ private fun DayCard(
                 }
                 Icon(Icons.Default.KeyboardArrowDown, if (open) "Plegar" else "Desplegar", Modifier.rotate(arrow))
             }
-            Spacer(Modifier.height(10.dp))
-            DayStrip(blocks.map { it.toEntry(0) }, height = 8.dp)
         }
         AnimatedVisibility(visible = open, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
             Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                blocks.forEach { b ->
-                    BlockRow(b, conflicts = conflictsOf(b, all), onEdit = { onEdit(b) }, onDuplicate = { onDuplicate(b) }, onDelete = { onDelete(b) })
+                blocks.forEachIndexed { i, b ->
+                    Box(Modifier.appear(i, 24f)) {
+                        BlockRow(b, conflicts = conflictsOf(b, all), onEdit = { onEdit(b) }, onDuplicate = { onDuplicate(b) }, onDelete = { onDelete(b) })
+                    }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                     FilledTonalButton(onClick = onAdd, modifier = Modifier.weight(1f)) {

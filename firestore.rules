@@ -17,14 +17,14 @@ service cloud.firestore {
       allow read: if signedIn();
 
       allow create: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['username', 'createdAt', 'weekPoints', 'strength', 'weekKey', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['username', 'createdAt', 'weekPoints', 'strength', 'weekKey', 'updatedAt', 'displayName', 'bio', 'photo'])
         && request.resource.data.username is string
         && getAfter(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == uid
         && validScores();
 
       // El nombre de usuario no se puede cambiar; las puntuaciones sí, dentro de unos límites.
       allow update: if isOwner(uid)
-        && request.resource.data.keys().hasOnly(['username', 'createdAt', 'weekPoints', 'strength', 'weekKey', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['username', 'createdAt', 'weekPoints', 'strength', 'weekKey', 'updatedAt', 'displayName', 'bio', 'photo'])
         && request.resource.data.username == resource.data.username
         && validScores();
 
@@ -34,7 +34,10 @@ service cloud.firestore {
         let d = request.resource.data;
         return (!('weekPoints' in d) || (d.weekPoints is int && d.weekPoints >= 0 && d.weekPoints <= 1000))
           && (!('strength' in d) || (d.strength is int && d.strength >= 0 && d.strength <= 5000))
-          && (!('weekKey' in d) || d.weekKey is string);
+          && (!('weekKey' in d) || d.weekKey is string)
+          && (!('displayName' in d) || (d.displayName is string && d.displayName.size() <= 40))
+          && (!('bio' in d) || (d.bio is string && d.bio.size() <= 160))
+          && (!('photo' in d) || (d.photo is string && d.photo.size() <= 150000));
       }
 
       // Amigos que has añadido: solo los ves y cambias tú.

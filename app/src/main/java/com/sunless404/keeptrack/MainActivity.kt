@@ -6,8 +6,13 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -23,17 +28,21 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sunless404.keeptrack.ui.account.AccountPanel
+import com.sunless404.keeptrack.ui.account.AuthScreen
+import com.sunless404.keeptrack.ui.account.ProfileScreen
 import com.sunless404.keeptrack.ui.assistant.AssistantScreen
 import com.sunless404.keeptrack.ui.common.KtIcons
 import com.sunless404.keeptrack.ui.edit.RoutineScreen
@@ -53,6 +62,7 @@ enum class Screen(val label: String, val icon: ImageVector?) {
     ESTADISTICAS("Estadísticas", KtIcons.Stats),
     RUTINA("Rutina", KtIcons.Routine),
     ASISTENTE("Asistente", KtIcons.Assistant),
+    PERFIL("Perfil", null),
     AJUSTES("Ajustes", null),
     GIMNASIO("Gimnasio", null),
 }
@@ -61,24 +71,43 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { KeepTrackTheme { KeepTrackApp() } }
+        setContent { KeepTrackTheme { Root() } }
+    }
+}
+
+/** Login o invitado al entrar; después, la app. */
+@Composable
+fun Root() {
+    val app = LocalContext.current.applicationContext as App
+    val account by app.cloud.account.collectAsState()
+    var guest by rememberSaveable { mutableStateOf(app.prefs.guest || !app.cloud.available) }
+    val showAuth = account == null && !guest
+    AnimatedContent(showAuth, transitionSpec = { fadeIn(tween(400)) togetherWith fadeOut(tween(300)) }, label = "auth") { auth ->
+        if (auth) {
+            AuthScreen(onGuest = { app.prefs.guest = true; guest = true })
+        } else {
+            KeepTrackApp(onWantsAccount = { app.prefs.guest = false; guest = false })
+        }
     }
 }
 
 @Composable
-fun KeepTrackApp() {
+fun KeepTrackApp(onWantsAccount: () -> Unit) {
     var screen by rememberSaveable { mutableStateOf(Screen.HOY) }
     var previous by rememberSaveable { mutableStateOf(Screen.HOY) }
     fun go(s: Screen) {
+        if (s == screen) return
         previous = screen
         screen = s
     }
     val todayVm: TodayViewModel = viewModel()
+    val tabs = Screen.entries.filter { it.icon != null }
 
     BackHandler(enabled = screen != Screen.HOY) {
         screen = when (screen) {
             Screen.GIMNASIO -> Screen.ESTADISTICAS
-            Screen.AJUSTES -> previous.takeIf { it != Screen.AJUSTES } ?: Screen.HOY
+            Screen.AJUSTES -> Screen.PERFIL
+            Screen.PERFIL -> previous.takeIf { it.icon != null } ?: Screen.HOY
             else -> Screen.HOY
         }
     }
@@ -87,30 +116,55 @@ fun KeepTrackApp() {
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-                Screen.entries.filter { it.icon != null }.forEach { s ->
+                tabs.forEach { s ->
                     NavigationBarItem(
                         selected = screen == s || (s == Screen.ESTADISTICAS && screen == Screen.GIMNASIO),
                         onClick = { go(s) },
                         icon = { Icon(s.icon!!, null) },
-                        label = { Text(s.label, maxLines = 1, softWrap = false, overflow = TextOverflow.Visible, style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp)) },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                        ),
+                        label = {
+                            Text(
+                                s.label, maxLines = 1, softWrap = false, overflow = TextOverflow.Visible,
+                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
+                            )
+                        },
+                        colors = NavigationBarItemDefaults.colors(indicatorColor = MaterialTheme.colorScheme.secondaryContainer),
                     )
                 }
             }
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
-            AnimatedContent(screen, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "pantalla") { s ->
+            AnimatedContent(
+                screen,
+                transitionSpec = {
+                    val from = tabs.indexOf(initialState)
+                    val to = tabs.indexOf(targetState)
+                    if (from >= 0 && to >= 0) {
+                        // Entre pestañas: desliza hacia el lado de la pestaña elegida.
+                        val dir = if (to > from) 1 else -1
+                        (slideInHorizontally(tween(320)) { it / 5 * dir } + fadeIn(tween(320))) togetherWith
+                            (slideOutHorizontally(tween(260)) { -it / 5 * dir } + fadeOut(tween(200)))
+                    } else {
+                        (scaleIn(tween(320), initialScale = 0.94f) + fadeIn(tween(320))) togetherWith fadeOut(tween(200))
+                    }
+                },
+                label = "pantalla",
+            ) { s ->
+                val profile = { go(Screen.PERFIL) }
                 when (s) {
-                    Screen.HOY -> TodayScreen(todayVm, onOpenSettings = { go(Screen.AJUSTES) })
-                    Screen.TAREAS -> TasksScreen(viewModel())
-                    Screen.ESTADISTICAS -> StatsScreen(viewModel(), onOpenGym = { go(Screen.GIMNASIO) })
-                    Screen.RUTINA -> RoutineScreen(viewModel())
-                    Screen.ASISTENTE -> AssistantScreen(viewModel(), onOpenSettings = { go(Screen.AJUSTES) })
+                    Screen.HOY -> TodayScreen(todayVm, onOpenProfile = profile)
+                    Screen.TAREAS -> TasksScreen(viewModel(), onOpenProfile = profile)
+                    Screen.ESTADISTICAS -> StatsScreen(viewModel(), onOpenGym = { go(Screen.GIMNASIO) }, onOpenProfile = profile)
+                    Screen.RUTINA -> RoutineScreen(viewModel(), onOpenProfile = profile)
+                    Screen.ASISTENTE -> AssistantScreen(viewModel(), onOpenSettings = { go(Screen.AJUSTES) }, onOpenProfile = profile)
                     Screen.GIMNASIO -> GymScreen(viewModel(), onBack = { screen = Screen.ESTADISTICAS })
-                    Screen.AJUSTES -> SettingsScreen(onBack = { screen = previous.takeIf { it != Screen.AJUSTES } ?: Screen.HOY }) {
+                    Screen.PERFIL -> ProfileScreen(
+                        viewModel(),
+                        onBack = { screen = previous.takeIf { it.icon != null } ?: Screen.HOY },
+                        onSettings = { go(Screen.AJUSTES) },
+                        onSignIn = onWantsAccount,
+                    )
+                    Screen.AJUSTES -> SettingsScreen(onBack = { screen = Screen.PERFIL }) {
                         Text("Cuenta y nube", style = MaterialTheme.typography.titleMedium)
                         AccountPanel("Con una cuenta, tu rutina, tareas, historial y gimnasio se guardan en la nube y los recuperas si cambias de móvil.")
                         HorizontalDivider(Modifier.padding(vertical = 8.dp))
@@ -120,6 +174,22 @@ fun KeepTrackApp() {
                     }
                 }
             }
+            CloudChoiceDialog()
         }
+    }
+}
+
+/** Tras iniciar sesión con datos en la nube: elegir con cuáles quedarse, estés donde estés. */
+@Composable
+private fun CloudChoiceDialog() {
+    val app = LocalContext.current.applicationContext as App
+    val pending by app.cloud.pendingChoice.collectAsState()
+    if (pending != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Ya hay datos en tu cuenta") },
+            text = { AccountPanel("") },
+            confirmButton = {},
+        )
     }
 }

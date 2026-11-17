@@ -1,6 +1,18 @@
 package com.sunless404.keeptrack.ui.assistant
 
 import android.Manifest
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
+import com.sunless404.keeptrack.ui.common.HelpTexts
+import com.sunless404.keeptrack.ui.common.TopActions
+import com.sunless404.keeptrack.ui.common.appear
+import com.sunless404.keeptrack.ui.theme.Brand
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -25,6 +37,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -85,6 +99,9 @@ import com.sunless404.keeptrack.ui.common.composeColor
 import java.io.File
 import java.time.LocalDate
 
+/** Texto de los mensajes: algo más grande y con más interlineado para que respire. */
+private val ChatText = TextStyle(fontSize = 15.sp, lineHeight = 23.sp)
+
 private val SUGGESTIONS = listOf(
     "Crea una rutina para estudiar 3 h al día entre semana",
     "Pasa el gimnasio a martes y jueves a las 19:00",
@@ -93,7 +110,7 @@ private val SUGGESTIONS = listOf(
 )
 
 @Composable
-fun AssistantScreen(vm: AssistantViewModel, onOpenSettings: () -> Unit) {
+fun AssistantScreen(vm: AssistantViewModel, onOpenSettings: () -> Unit, onOpenProfile: () -> Unit) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
     val list = rememberLazyListState()
@@ -116,17 +133,19 @@ fun AssistantScreen(vm: AssistantViewModel, onOpenSettings: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).imePadding()) {
-        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Asistente", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    "Crea y ajusta tu rutina y tus tareas",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainer).padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(KtIcons.Sparkle, null, Modifier.size(16.dp), tint = Brand.Accent)
+                Text("  Gemini", style = MaterialTheme.typography.labelLarge)
             }
-            if (ui.messages.isNotEmpty()) {
-                IconButton(onClick = vm::clear) { Icon(Icons.Default.Refresh, "Nueva conversación") }
+            Spacer(Modifier.weight(1f))
+            TopActions("Asistente", HelpTexts.ASSISTANT, onOpenProfile) {
+                if (ui.messages.isNotEmpty()) {
+                    IconButton(onClick = vm::clear) { Icon(Icons.Default.Refresh, "Nueva conversación") }
+                }
             }
         }
 
@@ -138,14 +157,16 @@ fun AssistantScreen(vm: AssistantViewModel, onOpenSettings: () -> Unit) {
         LazyColumn(
             state = list,
             modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             if (ui.messages.isEmpty()) item { Welcome { vm.send(it) } }
             itemsIndexed(ui.messages) { i, m ->
-                if (m.fromUser) UserBubble(m) else AssistantBubble(m, onApplyRoutine = { vm.applyRoutine(i) }, onApplyTasks = { vm.applyTasks(i) })
+                Box(Modifier.appear(0, 30f)) {
+                    if (m.fromUser) UserBubble(m) else AssistantBubble(m, onApplyRoutine = { vm.applyRoutine(i) }, onApplyTasks = { vm.applyTasks(i) })
+                }
             }
-            if (ui.busy) item { Typing() }
+            if (ui.busy) item { Box(Modifier.appear(0, 20f)) { Typing() } }
         }
 
         ui.notice?.let {
@@ -200,56 +221,98 @@ private fun NoKey(onOpenSettings: () -> Unit) {
     }
 }
 
+private val SUGGESTION_ICONS = listOf(KtIcons.Routine, KtIcons.Dumbbell, KtIcons.Tasks, KtIcons.Stats)
+
 @Composable
-private fun Welcome(onPick: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("¿En qué te ayudo?", style = MaterialTheme.typography.titleLarge)
+internal fun Welcome(onPick: (String) -> Unit) {
+    val t = rememberInfiniteTransition(label = "orbe")
+    val spin by t.animateFloat(0f, 360f, infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "giro")
+    val breathe by t.animateFloat(0.92f, 1.06f, infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "respira")
+    Column(Modifier.fillMaxWidth().padding(top = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(96.dp).appear(0), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.size(84.dp).scale(breathe).rotate(spin).clip(CircleShape)
+                    .background(Brush.sweepGradient(listOf(Brand.Accent, Color(0xFFB46CFF), Brand.Fire, Brand.Accent))),
+            )
+            Box(Modifier.size(70.dp).clip(CircleShape).background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.Center) {
+                Icon(KtIcons.Sparkle, null, Modifier.size(32.dp), tint = Brand.Accent)
+            }
+        }
+        Spacer(Modifier.height(20.dp))
+        Text("¿En qué te ayudo hoy?", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.appear(1))
+        Spacer(Modifier.height(6.dp))
         Text(
-            "Escríbeme, mándame una foto de tu horario o una nota de voz. Te enseñaré los cambios antes de guardarlos.",
+            "Escríbeme, mándame una foto de tu horario o una nota de voz.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.appear(2).padding(horizontal = 24.dp),
         )
-        SUGGESTIONS.forEach { s ->
-            AssistChip(onClick = { onPick(s) }, label = { Text(s) }, shape = MaterialTheme.shapes.medium)
+        Spacer(Modifier.height(24.dp))
+        SUGGESTIONS.chunked(2).forEachIndexed { r, pair ->
+            Row(Modifier.fillMaxWidth().padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                pair.forEachIndexed { c, text ->
+                    val i = r * 2 + c
+                    Card(
+                        onClick = { onPick(text) },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                        shape = MaterialTheme.shapes.large,
+                        modifier = Modifier.weight(1f).heightIn(min = 124.dp).appear(3 + i),
+                    ) {
+                        Column(Modifier.padding(14.dp)) {
+                            Icon(SUGGESTION_ICONS[i], null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.secondary)
+                            Spacer(Modifier.height(10.dp))
+                            Text(text, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            }
         }
         Text(
-            "Se envía a Google lo que escribes o adjuntas, tu rutina semanal y tus tareas del próximo mes. En el plan gratuito Google puede usarlo para mejorar sus productos.",
+            "Se envía a Google lo que escribes o adjuntas, tu rutina semanal y tus tareas del próximo mes.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.appear(8).padding(top = 6.dp, start = 12.dp, end = 12.dp),
         )
     }
 }
 
 @Composable
-private fun UserBubble(m: ChatMessage) {
+internal fun UserBubble(m: ChatMessage) {
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Column(
-            Modifier.widthIn(max = 300.dp)
-                .clip(RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp))
-                .background(MaterialTheme.colorScheme.primary)
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.widthIn(max = 310.dp)
+                .clip(RoundedCornerShape(24.dp, 24.dp, 8.dp, 24.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             m.attachments.forEach { a -> AttachmentView(a, onPrimary = true) }
-            if (m.text.isNotBlank()) Text(m.text, color = MaterialTheme.colorScheme.onPrimary)
+            if (m.text.isNotBlank()) Text(m.text, style = ChatText, color = MaterialTheme.colorScheme.onPrimaryContainer)
         }
     }
 }
 
 @Composable
-private fun AssistantBubble(m: ChatMessage, onApplyRoutine: () -> Unit, onApplyTasks: () -> Unit) {
-    Column(Modifier.fillMaxWidth(0.92f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+internal fun AssistantBubble(m: ChatMessage, onApplyRoutine: () -> Unit, onApplyTasks: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.Top) {
             Box(
-                Modifier.size(30.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+                Modifier.size(32.dp).clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(Brand.Accent.copy(alpha = 0.35f), Color(0xFFB46CFF).copy(alpha = 0.35f)))),
                 contentAlignment = Alignment.Center,
-            ) { Icon(KtIcons.Assistant, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSecondaryContainer) }
-            Spacer(Modifier.size(8.dp))
+            ) { Icon(KtIcons.Sparkle, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurface) }
+            Spacer(Modifier.size(12.dp))
             Text(
                 m.text,
+                style = ChatText,
                 color = if (m.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.clip(RoundedCornerShape(6.dp, 20.dp, 20.dp, 20.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(12.dp),
+                modifier = Modifier.weight(1f).padding(top = 4.dp)
+                    .then(
+                        if (m.error) Modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)).padding(12.dp)
+                        else Modifier
+                    ),
             )
         }
         m.routine?.let { r ->
@@ -326,9 +389,9 @@ private fun ProposalCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         shape = MaterialTheme.shapes.large,
-        modifier = Modifier.padding(start = 38.dp).fillMaxWidth(),
+        modifier = Modifier.padding(start = 44.dp).fillMaxWidth(),
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             content()
@@ -342,9 +405,13 @@ private fun ProposalCard(
 }
 
 @Composable
-private fun Typing() {
+internal fun Typing() {
     val t = rememberInfiniteTransition(label = "escribiendo")
-    Row(Modifier.padding(start = 38.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.size(32.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+            Icon(KtIcons.Sparkle, null, Modifier.size(18.dp), tint = Brand.Accent)
+        }
+        Text("  Pensando", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         (0..2).forEach { i ->
             val a by t.animateFloat(0.2f, 1f, infiniteRepeatable(tween(500, delayMillis = i * 150), RepeatMode.Reverse), label = "punto$i")
             Box(Modifier.size(9.dp).alpha(a).clip(CircleShape).background(MaterialTheme.colorScheme.onSurfaceVariant))
@@ -367,11 +434,11 @@ private fun AttachmentView(a: Attachment, onPrimary: Boolean, onRemove: (() -> U
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(KtIcons.Mic, null, Modifier.size(16.dp), tint = if (onPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
+                Icon(KtIcons.Mic, null, Modifier.size(16.dp), tint = if (onPrimary) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface)
                 Text(
                     " Nota de voz · ${a.durationSec / 60}:${"%02d".format(a.durationSec % 60)}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (onPrimary) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    color = if (onPrimary) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -399,8 +466,8 @@ private fun InputBar(
     onMic: () -> Unit,
     onCancelRecording: () -> Unit,
 ) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 2.dp) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)) {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
             if (ui.pending.isNotEmpty()) {
                 FlowRow(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ui.pending.forEach { a -> AttachmentView(a, onPrimary = false, onRemove = { onRemove(a) }) }
@@ -422,7 +489,10 @@ private fun InputBar(
                 }
                 return@Column
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(MaterialTheme.colorScheme.surfaceContainerHighest).padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 IconButton(onClick = onGallery, enabled = !ui.busy) { Icon(KtIcons.Image, "Adjuntar imagen") }
                 IconButton(onClick = onCamera, enabled = !ui.busy) { Icon(KtIcons.Camera, "Hacer foto") }
                 TextField(
@@ -432,6 +502,9 @@ private fun InputBar(
                     maxLines = 5,
                     shape = RoundedCornerShape(24.dp),
                     colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,

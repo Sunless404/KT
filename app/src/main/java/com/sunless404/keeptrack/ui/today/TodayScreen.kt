@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -31,7 +32,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -73,7 +73,10 @@ import com.sunless404.keeptrack.domain.fmtDuration
 import com.sunless404.keeptrack.domain.fmtShortDate
 import com.sunless404.keeptrack.domain.fmtTime
 import com.sunless404.keeptrack.domain.mondayOf
+import com.sunless404.keeptrack.ui.common.HelpTexts
 import com.sunless404.keeptrack.ui.common.KtIcons
+import com.sunless404.keeptrack.ui.common.TopActions
+import com.sunless404.keeptrack.ui.common.appear
 import com.sunless404.keeptrack.ui.common.ProgressRing
 import com.sunless404.keeptrack.ui.common.SectionLabel
 import com.sunless404.keeptrack.ui.common.composeColor
@@ -89,7 +92,7 @@ private const val PAGES = 4001
 private const val CENTER = PAGES / 2
 
 @Composable
-fun TodayScreen(vm: TodayViewModel, onOpenSettings: () -> Unit) {
+fun TodayScreen(vm: TodayViewModel, onOpenProfile: () -> Unit) {
     val now by vm.now.collectAsStateWithLifecycle()
     val today = now.toLocalDate()
     val pager = rememberPagerState(initialPage = CENTER) { PAGES }
@@ -123,8 +126,9 @@ fun TodayScreen(vm: TodayViewModel, onOpenSettings: () -> Unit) {
             if (selected != today) {
                 TextButton(onClick = { scope.launch { pager.animateScrollToPage(CENTER) } }) { Text("Hoy") }
             }
-            IconButton(onClick = { pickDate = true }) { Icon(Icons.Default.DateRange, "Elegir fecha") }
-            IconButton(onClick = onOpenSettings) { Icon(Icons.Default.Settings, "Ajustes") }
+            TopActions("Hoy", HelpTexts.TODAY, onOpenProfile) {
+                IconButton(onClick = { pickDate = true }) { Icon(Icons.Default.DateRange, "Elegir fecha") }
+            }
         }
         WeekStrip(selected, today) { scope.launch { pager.animateScrollToPage(pageOf(it)) } }
         HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
@@ -197,9 +201,9 @@ private fun DayPage(ui: TodayUi, vm: TodayViewModel) {
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        item { SummaryCard(ui, onType = { vm.setDayType(ui.date, it) }) }
+        item { Box(Modifier.appear(0)) { SummaryCard(ui, onType = { vm.setDayType(ui.date, it) }) } }
         if (ui.isToday) item { PermissionsCard() }
-        if (ui.isToday) item { NowCard(ui, onUnforeseen = { unforeseen = true }) }
+        if (ui.isToday) item { Box(Modifier.appear(1)) { NowCard(ui, onUnforeseen = { unforeseen = true }) } }
 
         item {
             SectionLabel("Extras") {
@@ -217,8 +221,8 @@ private fun DayPage(ui: TodayUi, vm: TodayViewModel) {
                 modifier = Modifier.padding(start = 4.dp),
             )
         }
-        items(ui.tasks, key = { "t${it.id}" }) { t ->
-            TaskRow(t, onCheck = { vm.setTaskDone(t, it) }, onClick = { editingTask = t })
+        itemsIndexed(ui.tasks, key = { _, t -> "t${t.id}" }) { i, t ->
+            Box(Modifier.animateItem().appear(2 + i)) { TaskRow(t, onCheck = { vm.setTaskDone(t, it) }, onClick = { editingTask = t }) }
         }
 
         item { SectionLabel("Rutina") }
@@ -233,8 +237,10 @@ private fun DayPage(ui: TodayUi, vm: TodayViewModel) {
         items(ui.carry, key = { "c${it.id}" }) { e ->
             EntryRow(e, carry = true, current = ui.current?.id == e.id, enabled = true) { vm.setStatus(e, it) }
         }
-        items(ui.entries, key = { "${it.id}-${it.blockId}-${it.startMin}" }) { e ->
-            EntryRow(e, carry = false, current = ui.isToday && ui.current?.id == e.id, enabled = !ui.isFuture) { vm.setStatus(e, it) }
+        itemsIndexed(ui.entries, key = { _, e -> "${e.id}-${e.blockId}-${e.startMin}" }) { i, e ->
+            Box(Modifier.animateItem().appear(3 + i)) {
+                EntryRow(e, carry = false, current = ui.isToday && ui.current?.id == e.id, enabled = !ui.isFuture) { vm.setStatus(e, it) }
+            }
         }
         if (ui.entries.isEmpty()) item {
             Text("No hay bloques de rutina este día.", modifier = Modifier.padding(start = 4.dp), style = MaterialTheme.typography.bodySmall)

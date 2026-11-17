@@ -71,7 +71,10 @@ import com.sunless404.keeptrack.domain.ES
 import com.sunless404.keeptrack.domain.fmtLongDate
 import com.sunless404.keeptrack.domain.fmtTime
 import com.sunless404.keeptrack.domain.mondayOf
+import com.sunless404.keeptrack.ui.common.HelpTexts
 import com.sunless404.keeptrack.ui.common.KtIcons
+import com.sunless404.keeptrack.ui.common.TopActions
+import com.sunless404.keeptrack.ui.common.appear
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flatMapLatest
@@ -104,7 +107,7 @@ class TasksViewModel(app: Application) : AndroidViewModel(app) {
 private val monthFmt = DateTimeFormatter.ofPattern("MMMM yyyy", ES)
 
 @Composable
-fun TasksScreen(vm: TasksViewModel) {
+fun TasksScreen(vm: TasksViewModel, onOpenProfile: () -> Unit) {
     val month by vm.month.collectAsStateWithLifecycle()
     val tasks by vm.tasks.collectAsStateWithLifecycle()
     val today = LocalDate.now()
@@ -137,6 +140,7 @@ fun TasksScreen(vm: TasksViewModel) {
                 if (month != YearMonth.now()) TextButton(onClick = { vm.month.value = YearMonth.now() }) { Text("Hoy") }
                 IconButton(onClick = { vm.shift(-1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Mes anterior") }
                 IconButton(onClick = { vm.shift(1) }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Mes siguiente") }
+                TopActions("Tareas", HelpTexts.TASKS, onOpenProfile)
             }
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth()) {
@@ -155,7 +159,7 @@ fun TasksScreen(vm: TasksViewModel) {
                     slideInHorizontally { it * dir } togetherWith slideOutHorizontally { -it * dir }
                 },
                 label = "mes",
-            ) { m -> MonthGrid(m, today, tasks) { openDay = it.toEpochDay() } }
+            ) { m -> Box(Modifier.appear(1)) { MonthGrid(m, today, tasks) { openDay = it.toEpochDay() } } }
             Spacer(Modifier.height(96.dp))
         }
     }

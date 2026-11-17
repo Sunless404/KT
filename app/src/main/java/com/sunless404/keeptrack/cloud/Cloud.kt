@@ -14,6 +14,7 @@ import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
 import com.sunless404.keeptrack.App
 import com.sunless404.keeptrack.data.Backup
+import com.sunless404.keeptrack.data.Profile
 import com.sunless404.keeptrack.data.restore
 import com.sunless404.keeptrack.data.toBackup
 import com.sunless404.keeptrack.domain.GymScore
@@ -29,6 +30,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
+import java.util.Base64
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -39,6 +41,8 @@ data class Account(val uid: String, val email: String, val username: String?)
 data class LeaderRow(
     val uid: String,
     val username: String,
+    val displayName: String,
+    val photo: ByteArray?,
     /** Puntos de la semana actual (0 si su último dato es de otra semana). */
     val weekPoints: Int,
     val strength: Int,
@@ -106,6 +110,14 @@ class Cloud(private val app: App) {
             val doc = users().document(uid).get().await()
             val name = doc.getString("username")
             _account.value = _account.value?.copy(username = name)
+            // La nube manda: si tiene nombre, bio o foto, se copian al móvil; si no, se suben los del móvil.
+            val remoteName = doc.getString("displayName")
+            if (remoteName != null) {
+                app.profile.update(remoteName, doc.getString("bio").orEmpty(), notify = false)
+                app.profile.setPhoto(doc.getString("photo")?.let { runCatching { Base64.getDecoder().decode(it) }.getOrNull() }, notify = false)
+            } else {
+                pushProfile(app.profile.profile.value)
+            }
             app.prefs.sp.edit().putString("cloudUsername", name).apply()
             if (!app.prefs.sp.getBoolean(PREF_SYNC_READY + uid, false)) checkCloudBackup(uid) else publishScore()
         } catch (_: Exception) {
@@ -160,6 +172,8 @@ class Cloud(private val app: App) {
                     CloudException("Ese nombre de usuario ya está cogido.") else e
             }
             _account.value = Account(user.uid, user.email.orEmpty(), username)
+            if (app.profile.profile.value.displayName.isBlank()) app.profile.update(rawUsername.trim(), app.profile.profile.value.bio, notify = false)
+            pushProfile(app.profile.profile.value)
             // Cuenta nueva: lo que hay en el móvil pasa a ser la copia de la nube.
             app.prefs.sp.edit().putBoolean(PREF_SYNC_READY + user.uid, true).apply()
             uploadNow()
@@ -189,6 +203,26 @@ class Cloud(private val app: App) {
         uploadJob?.cancel()
         _pendingChoice.value = null
         auth?.signOut()
+    }
+
+    // ---------- Perfil público ----------
+
+    /** Sube nombre visible, biografía y foto al perfil público. */
+    fun pushProfile(p: Profile) {
+        val uid = _account.value?.uid ?: return
+        app.scope.launch {
+            runCatching {
+                users().document(uid).set(
+                    mapOf(
+                        "displayName" to p.displayName,
+                        "bio" to p.bio,
+                        "photo" to (p.photo?.let { Base64.getEncoder().encodeToString(it) } ?: ""),
+                        "updatedAt" to FieldValue.serverTimestamp(),
+                    ),
+                    SetOptions.merge(),
+                ).await()
+            }
+        }
     }
 
     // ---------- Sincronización ----------
@@ -319,6 +353,8 @@ class Cloud(private val app: App) {
                 LeaderRow(
                     uid = uid,
                     username = d.getString("username") ?: "?",
+                    displayName = d.getString("displayName").orEmpty(),
+                    photo = d.getString("photo")?.let { runCatching { Base64.getDecoder().decode(it) }.getOrNull() },
                     weekPoints = if (d.getString("weekKey") == week) (d.getLong("weekPoints") ?: 0).toInt() else 0,
                     strength = (d.getLong("strength") ?: 0).toInt(),
                     isMe = uid == me,
